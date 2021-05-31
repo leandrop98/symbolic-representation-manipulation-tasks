@@ -183,23 +183,20 @@ parser.add_argument('--render_tile_size', default=256, type=int,
          "rendering may achieve better performance using smaller tile sizes " +
          "while larger tile sizes may be optimal for GPU-based rendering.")
 
-
+def rand_rotation():
+  """ Returns a random rotation between 0 and 360 degrees """
+  return random.random()*360
 
 #render scene function
-def render_scene(args,
-    objects_category,
-    objects_id,
-    relationship,
-    output_image_id,
+def render_scene(args,scene_struct,
     output_index=0,
     output_split='none',
     output_scene='render_json',
-    output_blendfile=None
+    output_blendfile=None,
+    
 ):
 
-  # Load the main blendfile
-  bpy.ops.wm.open_mainfile(filepath='data/base_scene.blend')
-
+  output_image_id = str(uuid.uuid1())
   # Set render arguments so we can get pixel coordinates later.
   # We use functionality specific to the CYCLES renderer so BLENDER_RENDER
   # cannot be used.
@@ -211,6 +208,7 @@ def render_scene(args,
   render_args.resolution_percentage = 100
   render_args.tile_x = args.render_tile_size
   render_args.tile_y = args.render_tile_size
+  
   if args.use_gpu == 1:
     # Blender changed the API for enabling CUDA at some point
     if bpy.app.version < (2, 78, 0):
@@ -229,14 +227,7 @@ def render_scene(args,
   if args.use_gpu == 1:
     bpy.context.scene.cycles.device = 'GPU'
 
-  # This will give ground-truth information about the scene and its objects
-  scene_struct = {
-      'split': output_split,
-      'image_index': output_index,
-      'image_filename': os.path.basename(output_image_id+".png"),
-      'objects': [],
-      'directions': {},
-  }
+
 
   # Put a plane on the ground so we can compute cardinal directions
   bpy.ops.mesh.primitive_plane_add(size=5)
@@ -253,25 +244,25 @@ def render_scene(args,
   # Figure out the left, up, and behind directions along the plane and record
   # them in the scene structure
   camera = bpy.data.objects['Camera']
-  plane_normal = plane.data.vertices[0].normal
-  cam_behind = camera.matrix_world.to_quaternion() @ Vector((0, 0, -1))
-  cam_left = camera.matrix_world.to_quaternion() @ Vector((-1, 0, 0))
-  cam_up = camera.matrix_world.to_quaternion() @ Vector((0, 1, 0))
-  plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
-  plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
-  plane_up = cam_up.project(plane_normal).normalized()
+  #plane_normal = plane.data.vertices[0].normal
+  #cam_behind = camera.matrix_world.to_quaternion() @ Vector((0, 0, -1))
+  #cam_left = camera.matrix_world.to_quaternion() @ Vector((-1, 0, 0))
+  #cam_up = camera.matrix_world.to_quaternion() @ Vector((0, 1, 0))
+  #plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
+  #plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
+  #plane_up = cam_up.project(plane_normal).normalized()
 
   # Delete the plane; we only used it for normals anyway. The base scene file
   # contains the actual ground plane.
-  utils.delete_object(plane)
+  #utils.delete_object(plane)
 
   # Save all six axis-aligned directions in the scene struct
-  scene_struct['directions']['behind'] = tuple(plane_behind)
-  scene_struct['directions']['front'] = tuple(-plane_behind)
-  scene_struct['directions']['left'] = tuple(plane_left)
-  scene_struct['directions']['right'] = tuple(-plane_left)
-  scene_struct['directions']['above'] = tuple(plane_up)
-  scene_struct['directions']['below'] = tuple(-plane_up)
+  #scene_struct['directions']['behind'] = tuple(plane_behind)
+  # scene_struct['directions']['front'] = tuple(-plane_behind)
+  # scene_struct['directions']['left'] = tuple(plane_left)
+  # scene_struct['directions']['right'] = tuple(-plane_left)
+  # scene_struct['directions']['above'] = tuple(plane_up)
+  # scene_struct['directions']['below'] = tuple(-plane_up)
 
   # Add random jitter to lamp positions
   if args.key_light_jitter > 0:
@@ -284,14 +275,15 @@ def render_scene(args,
     for i in range(3):
       bpy.data.objects['Lamp_Fill'].location[i] += rand(args.fill_light_jitter)
 
-  # Now make some random objects, return scene information
-  scene_struct = add_two_objects(scene_struct, args, camera, objects_category, objects_id,relationship)
+  # Get bounding boxes of all objects
+  for obj_struct in scene_struct['objects']:
+    bbverts = [bpy.data.objects[obj_struct['scene_object_name']].matrix_world@Vector(bbvert) for bbvert in bpy.data.objects[obj_struct['scene_object_name']].bound_box]
+    bbox_3d_obj = [utils.get_camera_coords(camera, bbvert) for bbvert in bbverts]
+    obj_struct["3d_bbox"] = bbox_3d_obj
 
-  
- 
-  # Render the scene and dump the scene data structure
-  #scene_struct['objects'] = objects
-  #scene_struct['relationships'] = compute_all_relationships(scene_struct)
+  scene_struct['image_filename'] =  os.path.basename(output_image_id+".png")
+  scene_struct['relationships'] = compute_all_relationships(scene_struct)
+
   # Render scene
   while True:
     try:
@@ -307,13 +299,10 @@ def render_scene(args,
   if output_blendfile is not None:
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
 
-def init_scene(args):
-
-  # Load the main blendfile
-  bpy.ops.wm.open_mainfile(filepath='data/base_scene.blend')
 
 
-def add_two_objects(scene_struct, args, camera, objects_category, objects_id, relationship):
+
+def add_two_objects(args,scene_struct, objects_category, objects_id, relationship,table_height):
   
   """
   Add random objects to the current blender scene
@@ -331,7 +320,7 @@ def add_two_objects(scene_struct, args, camera, objects_category, objects_id, re
   print(selected_objects)
   obj_object1 = selected_objects[0] 
   obj_object1.name = "Object1_" + relationship+ "_" + str(datetime.now())
-  obj_object1.delta_rotation_euler =  Euler((0,0, math.radians(utils.rand_rotation())), 'XYZ')
+  obj_object1.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
   scene_objects.append(obj_object1)
 
   # Import Object 2 in the scene in the center position with random z orientation
@@ -339,7 +328,7 @@ def add_two_objects(scene_struct, args, camera, objects_category, objects_id, re
   selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
   obj_object2 = selected_objects[0] 
   obj_object2.name = "Object2_" + relationship + "_" +  str(datetime.now())
-  obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(utils.rand_rotation())), 'XYZ')
+  obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
   scene_objects.append(obj_object2)
 
   # Change z location to put objects in the floor
@@ -348,8 +337,8 @@ def add_two_objects(scene_struct, args, camera, objects_category, objects_id, re
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
   min_z_obj1 = min([vec[2] for vec in bbverts_obj1])
   min_z_obj2 = min([vec[2] for vec in bbverts_obj2])
-  obj_object1.location.z -= min_z_obj1
-  obj_object2.location.z -= min_z_obj2  
+  obj_object1.location.z += -min_z_obj1 + table_height
+  obj_object2.location.z += -min_z_obj2 + table_height
 
   # Apply the relationshiop to the second object
   border_limit = args.border_limit
@@ -413,25 +402,23 @@ def add_two_objects(scene_struct, args, camera, objects_category, objects_id, re
             break
 
 
-  # Get the 3d bounding box of the object and create the metadata
-  objects_metadata = []
-  for i, obj in enumerate(scene_objects):
-    # Get 3d bounding box of the object
-    bbverts = [obj.matrix_world@Vector(bbvert) for bbvert in obj.bound_box]
-    bbox_3d_obj = [utils.get_camera_coords(camera, bbvert) for bbvert in bbverts]
-    obj_metadata = {
-      'id':str(uuid.uuid1()),
-      'shapenet_id': objects_id[i],
-      'category': objects_category[i],
-      '3d_bbox': bbox_3d_obj,
-    }
-    objects_metadata.append(obj_metadata)
+  obj1_metadata = {
+    'id':str(uuid.uuid1()),
+    'shapenet_id': objects_id[0],
+    'scene_object_name':obj_object1.name,
+    'category': objects_category[0],
+    '3d_bbox': None, # It has to be calculated later with the camera information
+  }
+  obj2_metadata = {
+    'id':str(uuid.uuid1()),
+    'shapenet_id': objects_id[1],
+    'scene_object_name':obj_object2.name,
+    'category': objects_category[1],
+    '3d_bbox': None, # It has to be calculated later with the camera information
+  }
+  scene_struct['objects'].extend([obj1_metadata,obj2_metadata])
 
-  relationships = compute_all_relationships(scene_objects,objects_metadata)
-  metadata = {"objects":objects_metadata,
-              "relationships":relationships}
-
-  return metadata
+  return scene_struct
 
   # Check that all objects are at least partially visible in the rendered image
   """ all_visible = check_visibility(blender_objects, args.min_pixels_per_object)
@@ -445,7 +432,7 @@ def add_two_objects(scene_struct, args, camera, objects_category, objects_id, re
 
   return None, None
 
-def compute_all_relationships(scene_objects,objects_metadata):
+def compute_all_relationships(scene_struct):
   """ Computes relationships between all pairs of objects in the scene.
   
   Returns a dictionary mapping string relationship names to lists of lists of
@@ -454,80 +441,91 @@ def compute_all_relationships(scene_objects,objects_metadata):
   object j is left of object i. """
 
   all_relationships = []
-  for i, obj1 in enumerate(scene_objects):
-    for j, obj2 in enumerate(scene_objects):
+  for obj1_struct in scene_struct['objects']:
+    for obj2_struct in scene_struct['objects']:
+      if obj1_struct==obj2_struct:
+        continue
+      obj1 = bpy.data.objects[obj1_struct['scene_object_name']]
+      obj2 = bpy.data.objects[obj2_struct['scene_object_name']]
+
       obj1_size = (obj1.matrix_world @ obj1.dimensions)
       obj2_size = (obj2.matrix_world @ obj2.dimensions)
+      obj1_bbox = [bpy.data.objects[obj1_struct['scene_object_name']].matrix_world@Vector(bbvert) for bbvert in bpy.data.objects[obj1_struct['scene_object_name']].bound_box]
+      obj2_bbox = [bpy.data.objects[obj2_struct['scene_object_name']].matrix_world@Vector(bbvert) for bbvert in bpy.data.objects[obj2_struct['scene_object_name']].bound_box]
+      min_z_obj1 = min([vec[2] for vec in obj1_bbox])
+      min_z_obj2 =  min([vec[2] for vec in obj2_bbox])
+      max_z_obj1 = max([vec[2] for vec in obj1_bbox])
+      max_z_obj2 =  max([vec[2] for vec in obj2_bbox])
       relationship = None
-      if obj1==obj2:
-        continue
-      # Center in object 2, see position of obj1 relatively to obj2
+      print(obj2.location.y)
+      print(obj2.location.x)
+      # Position of obj1 relatively to obj2
       # BEHIND
-      if(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit ):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+      if(obj1.location.y-obj2.location.y >= abs(obj1.location.x-obj2.location.x)*args.border_limit):
+                relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":BEHIND
                        }
       # FRONT OF
       elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit ):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":FRONT
                        }
       # LEFT
       elif(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit ):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":LEFT
                        }
       # RIGHT
       elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit ):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":RIGHT
                        }
       # RIGHT_BEHIND
       elif(obj1.location.y-obj2.location.y >=  (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y <= args.border_limit*(obj1.location.x-obj2.location.x) ):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":RIGHT_BEHIND
                        }
       # LEFT_BEHIND
       elif(obj1.location.y-obj2.location.y >=  -(obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x) ):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":LEFT_BEHIND
                        }
       # RIGHT_FRONT
       elif(obj1.location.y-obj2.location.y >=  -args.border_limit*(obj1.location.x-obj2.location.x) and
         obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":RIGHT_FRONT
                        }
       # LEFT_FRONT
       elif(obj1.location.y-obj2.location.y >= -args.border_limit*(obj1.location.x-obj2.location.x)and
         obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":LEFT_FRONT
                        }
       # ON
-      elif(obj1.location.z >= obj2_size[2]):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+      
+      elif(min_z_obj1 - max_z_obj2 <= 0.001 and obj1.location>obj2.location):
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":ON
                         }
       # UNDER
-      elif(obj1.location.z < obj2_size[2]):
-        relationship = {"object":objects_metadata[i]["id"],
-                        "subject":objects_metadata[j]["id"],
+      elif(min_z_obj2 - max_z_obj1 <= 0.001  and obj1.location<obj2.location):
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
                         "predicate:":UNDER
                         }
       # Add the relationship to the array of relationships
@@ -569,7 +567,7 @@ def add_random_table(args, scene_struct, table_ids):
   # Get the path of the objects to add to the scene
 
   table_id = random.choice(table_ids)
-  obj_path = args.models_dir + "/table/" +  table_id  + "/models/model_normalized.obj"
+  obj_path = args.models_dir + "/Table/" +  table_id  + "/models/model_normalized.obj"
   
 
   # Import Object 1 in the scene in the center position with random z orientation
@@ -577,14 +575,28 @@ def add_random_table(args, scene_struct, table_ids):
   selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
   obj_object = selected_objects[0] 
   obj_object.name = "Table" + str(datetime.now())
-  obj_object.delta_rotation_euler =  Euler((0,0, math.radians(utils.rand_rotation())), 'XYZ')
+  obj_object.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
+  
+  # Change table scale
+  obj_object.scale.x=10
+  obj_object.scale.y=10
+  obj_object.scale.z=10
+  bpy.context.view_layer.update() 
 
-
-  # Change z location to put objects in the floor
+  # Change z location to put table in the floodr
   
   bbverts_obj = [obj_object.matrix_world@Vector(bbvert) for bbvert in obj_object.bound_box]
   min_z_obj = min([vec[2] for vec in bbverts_obj])
   obj_object.location.z -= min_z_obj  
+  bpy.context.view_layer.update() 
+  
+  # Get table height
+  bbverts_obj = [obj_object.matrix_world@Vector(bbvert) for bbvert in obj_object.bound_box]
+  max_z_obj = max([vec[2] for vec in bbverts_obj])
+
+
+  table_height = max_z_obj
+
 
   ## Override context due to blender 
   for window in bpy.context.window_manager.windows:
@@ -596,33 +608,41 @@ def add_random_table(args, scene_struct, table_ids):
             bpy.ops.screen.screen_full_area(override)
             break
 
-  # Get the 3d bounding box of the object and create the metadata
-  # Get 3d bounding box of the object
-  bbverts = [obj_object.matrix_world@Vector(bbvert) for bbvert in obj_object.bound_box]
-  #bbox_3d_obj = [utils.get_camera_coords(camera, bbvert) for bbvert in bbverts]
   obj_metadata = {
     'id':str(uuid.uuid1()),
     'shapenet_id': table_id,
-    'scene_object_name':os.name,
+    'scene_object_name':obj_object.name,
     'category': "Table",
-    '3d_bbox': None, # It has to be calculated later
+    '3d_bbox': None, # It has to be calculated later with the camera information
   }
   scene_struct["objects"].append(obj_metadata) 
   
-  return scene_struct
+  return scene_struct, table_height
 
 
 def main(args):
-  ##
-  obj1_path = '/home/leandro/clevr/clevr-dataset-gen/image_generation/mug.obj'
-  obj2_path = '/home/leandro/clevr/clevr-dataset-gen/image_generation/mug.obj'
-
-  scene_struct = {"objects":[],
-                  "relationships":[]}
+  scene_struct = {"objects":[], "relationships":[]}
+ 
   with open(args.models_dir + "/models.json", "r") as read_file:
     models_dict = json.load(read_file)
-    scene_struct = add_random_table(args,scene_struct,models_dict["table"])
+    table_ids = models_dict["Table"]
+    # Remove the Tables from the list
+    models_dict.pop('Table', None)
 
+    # Load the main blendfile
+    bpy.ops.wm.open_mainfile(filepath='data/base_scene.blend')
+    
+    scene_struct,table_height = add_random_table(args,scene_struct,table_ids)
+
+    bottles = models_dict["Bottle"]
+    bowls = models_dict["Bowl"]
+    print(bottles[0])
+    scene_struct = add_two_objects(args,scene_struct,["Bottle","Bowl"],[bottles[0],bowls[0]],LEFT,table_height)
+
+    # Add some other objects...
+
+    # Render scene...
+    render_scene(args,scene_struct)
   # # Read file with the 3d models list
   # try:
   #   with open(args.models_dir + "/models.json", "r") as read_file:

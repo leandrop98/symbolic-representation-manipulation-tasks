@@ -197,7 +197,5 @@ def add_material(name, **properties):
   )
 
 
-def rand_rotation():
-  """ Returns a random rotation between 0 and 360 degrees """
-  return random.random()*360
+
 
