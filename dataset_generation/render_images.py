@@ -14,15 +14,17 @@ import uuid
 LEFT = "left"
 RIGHT = "right"
 ON = "on"
-BELOW ="below"
+UNDER ="under"
 FRONT = "in front of"
 BEHIND = "behind"
 LEFT_BEHIND = "left_behind"
 RIGHT_BEHIND = "right_behind"
 LEFT_FRONT = "left_front"
 RIGHT_FRONT = "right_front"
+NEAR = "near"
+FAR = "far"
 
-relationships = [LEFT,RIGHT,BELOW,ON,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT]
+relationships = [LEFT,RIGHT,UNDER,ON,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT]
 
 
 ## SHAPE NET Test Query
@@ -310,8 +312,6 @@ def add_two_objects(scene_struct, args, camera, objects_category, objects_id, re
   """
   Add random objects to the current blender scene
   """
-  def randRotation():
-    return random.random()*360
 
   # Get the path of the objects to add to the scene
   obj1_path = args.models_dir + "/" + objects_category[0] + "/" +  objects_id[0]  + "/models/model_normalized.obj"
@@ -325,7 +325,7 @@ def add_two_objects(scene_struct, args, camera, objects_category, objects_id, re
   print(selected_objects)
   obj_object1 = selected_objects[0] 
   obj_object1.name = "Object1_" + relationship+ "_" + str(datetime.now())
-  obj_object1.delta_rotation_euler =  Euler((0,0, math.radians(randRotation())), 'XYZ')
+  obj_object1.delta_rotation_euler =  Euler((0,0, math.radians(utils.rand_rotation())), 'XYZ')
   scene_objects.append(obj_object1)
 
   # Import Object 2 in the scene in the center position with random z orientation
@@ -333,7 +333,7 @@ def add_two_objects(scene_struct, args, camera, objects_category, objects_id, re
   selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
   obj_object2 = selected_objects[0] 
   obj_object2.name = "Object2_" + relationship + "_" +  str(datetime.now())
-  obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(randRotation())), 'XYZ')
+  obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(utils.rand_rotation())), 'XYZ')
   scene_objects.append(obj_object2)
 
   # Change z location to put objects in the floor
@@ -518,7 +518,12 @@ def compute_all_relationships(scene_objects,objects_metadata):
                         "subject":objects_metadata[j]["id"],
                         "predicate:":ON
                         }
-
+      # UNDER
+      elif(obj1.location.z < obj2_size[2]):
+        relationship = {"object":objects_metadata[i]["id"],
+                        "subject":objects_metadata[j]["id"],
+                        "predicate:":UNDER
+                        }
       # Add the relationship to the array of relationships
       all_relationships.append(relationship)
 
@@ -553,21 +558,75 @@ def objects_overlap(obj1,obj2):
       print("obj1 and obj2 NOT touching!")
       return False
 
+def add_random_table(args, scene_struct, camera, table_ids):
+ 
+  # Get the path of the objects to add to the scene
+
+  table_id = random.choice(table_ids)
+  obj_path = args.models_dir + "/table/" +  table_id  + "/models/model_normalized.obj"
+  
+
+  # Import Object 1 in the scene in the center position with random z orientation
+  imported_object = bpy.ops.import_scene.obj(filepath=obj_path)
+  selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
+  obj_object = selected_objects[0] 
+  obj_object.name = "Table" + str(datetime.now())
+  obj_object.delta_rotation_euler =  Euler((0,0, math.radians(utils.rand_rotation())), 'XYZ')
+
+
+  # Change z location to put objects in the floor
+  
+  bbverts_obj = [obj_object.matrix_world@Vector(bbvert) for bbvert in obj_object.bound_box]
+  min_z_obj = min([vec[2] for vec in bbverts_obj])
+  obj_object.location.z -= min_z_obj  
+
+  ## Override context due to blender 
+  for window in bpy.context.window_manager.windows:
+    screen = window.screen
+
+    for area in screen.areas:
+        if area.type == 'VIEW_3D':
+            override = {'window': window, 'screen': screen, 'area': area}
+            bpy.ops.screen.screen_full_area(override)
+            break
+
+  # Get the 3d bounding box of the object and create the metadata
+  # Get 3d bounding box of the object
+  bbverts = [obj_object.matrix_world@Vector(bbvert) for bbvert in obj_object.bound_box]
+  bbox_3d_obj = [utils.get_camera_coords(camera, bbvert) for bbvert in bbverts]
+  obj_metadata = {
+    'id':str(uuid.uuid1()),
+    'shapenet_id': table_id,
+    'scene_object_name':os.name,
+    'category': "Table",
+    '3d_bbox': bbox_3d_obj,
+  }
+  scene_struct["objects"].append(obj_metadata) 
+
+
+
 def main(args):
   ##
   obj1_path = '/home/leandro/clevr/clevr-dataset-gen/image_generation/mug.obj'
   obj2_path = '/home/leandro/clevr/clevr-dataset-gen/image_generation/mug.obj'
-  # Read file with the 3d models list
-  try:
-    with open(args.models_dir + "/models.json", "r") as read_file:
-      models_dict = json.load(read_file)
-    for models_category1 in models_dict:      
-      for model1 in models_dict[models_category1]:
-        for models_category2 in models_dict:      
-          for model2 in models_dict[models_category2]:
-            print(models_category1 + " (" +model1+") -> " + models_category2 + "("+model2+")")
-            for relationship in relationships:
-              render_scene(args, [models_category1,models_category2],[model1,model2],relationship,output_image_id=str(uuid.uuid1()))
+
+  scene_struct = {"objects":[],
+                  "relationships":[]}
+
+  render_scene(args, [models_category1,models_category2],[model1,model2],relationship,output_image_id=str(uuid.uuid1()))
+
+
+  # # Read file with the 3d models list
+  # try:
+  #   with open(args.models_dir + "/models.json", "r") as read_file:
+  #     models_dict = json.load(read_file)
+  #   for models_category1 in models_dict:      
+  #     for model1 in models_dict[models_category1]:
+  #       for models_category2 in models_dict:      
+  #         for model2 in models_dict[models_category2]:
+  #           print(models_category1 + " (" +model1+") -> " + models_category2 + "("+model2+")")
+  #           for relationship in relationships:
+  #             render_scene(args, [models_category1,models_category2],[model1,model2],relationship,output_image_id=str(uuid.uuid1()))
 
     
   except FileNotFoundError:
