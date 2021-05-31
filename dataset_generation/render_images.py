@@ -307,6 +307,12 @@ def render_scene(args,
   if output_blendfile is not None:
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
 
+def init_scene(args):
+
+  # Load the main blendfile
+  bpy.ops.wm.open_mainfile(filepath='data/base_scene.blend')
+
+
 def add_two_objects(scene_struct, args, camera, objects_category, objects_id, relationship):
   
   """
@@ -558,7 +564,7 @@ def objects_overlap(obj1,obj2):
       print("obj1 and obj2 NOT touching!")
       return False
 
-def add_random_table(args, scene_struct, camera, table_ids):
+def add_random_table(args, scene_struct, table_ids):
  
   # Get the path of the objects to add to the scene
 
@@ -593,16 +599,17 @@ def add_random_table(args, scene_struct, camera, table_ids):
   # Get the 3d bounding box of the object and create the metadata
   # Get 3d bounding box of the object
   bbverts = [obj_object.matrix_world@Vector(bbvert) for bbvert in obj_object.bound_box]
-  bbox_3d_obj = [utils.get_camera_coords(camera, bbvert) for bbvert in bbverts]
+  #bbox_3d_obj = [utils.get_camera_coords(camera, bbvert) for bbvert in bbverts]
   obj_metadata = {
     'id':str(uuid.uuid1()),
     'shapenet_id': table_id,
     'scene_object_name':os.name,
     'category': "Table",
-    '3d_bbox': bbox_3d_obj,
+    '3d_bbox': None, # It has to be calculated later
   }
   scene_struct["objects"].append(obj_metadata) 
-
+  
+  return scene_struct
 
 
 def main(args):
@@ -612,9 +619,9 @@ def main(args):
 
   scene_struct = {"objects":[],
                   "relationships":[]}
-
-  render_scene(args, [models_category1,models_category2],[model1,model2],relationship,output_image_id=str(uuid.uuid1()))
-
+  with open(args.models_dir + "/models.json", "r") as read_file:
+    models_dict = json.load(read_file)
+    scene_struct = add_random_table(args,scene_struct,models_dict["table"])
 
   # # Read file with the 3d models list
   # try:
@@ -627,10 +634,10 @@ def main(args):
   #           print(models_category1 + " (" +model1+") -> " + models_category2 + "("+model2+")")
   #           for relationship in relationships:
   #             render_scene(args, [models_category1,models_category2],[model1,model2],relationship,output_image_id=str(uuid.uuid1()))
-
-    
-  except FileNotFoundError:
-    print("File \"" + args.models_dir + "/objects.json" +"\" was not found!")
+  #
+  #
+  # except FileNotFoundError:
+  #   print("File \"" + args.models_dir + "/objects.json" +"\" was not found!")
 
 
 if __name__ == '__main__':
