@@ -168,7 +168,7 @@ parser.add_argument('--fill_light_jitter', default=1.0, type=float,
     help="The magnitude of random jitter to add to the fill light position.")
 parser.add_argument('--back_light_jitter', default=1.0, type=float,
     help="The magnitude of random jitter to add to the back light position.")
-parser.add_argument('--camera_jitter', default=0.5, type=float,
+parser.add_argument('--camera_jitter', default=1.0, type=float,
     help="The magnitude of random jitter to add to the camera position")
 parser.add_argument('--render_num_samples', default=512, type=int,
     help="The number of samples to use when rendering. Larger values will " +
@@ -188,7 +188,7 @@ def rand_rotation():
   return random.random()*360
 
 #render scene function
-def render_scene(args,scene_struct,
+def render_scene(args,scene_struct,table_height,
     output_index=0,
     output_split='none',
     output_scene='render_json',
@@ -230,41 +230,42 @@ def render_scene(args,scene_struct,
 
 
   # Put a plane on the ground so we can compute cardinal directions
-  bpy.ops.mesh.primitive_plane_add(size=5)
-  plane = bpy.context.scene.view_layers[0].objects.active 
+  #bpy.ops.mesh.primitive_plane_add(size=5)
+  #plane = bpy.context.scene.view_layers[0].objects.active 
+
+  # Make light and camre point to the center of the table
+  bpy.data.objects['Direction_Object'].location.z += table_height
+
 
   def rand(L):
-    return 2.0 * L * (random.random() - 0.5)
+    return 2*L * random.random() - L
 
+  # Put the lamps and the camera above the table
+  bpy.data.objects['Lamp_Key'].location.z += table_height
+  bpy.data.objects['Lamp_Back'].location.z += table_height
+  bpy.data.objects['Lamp_Fill'].location.z += table_height
+  bpy.data.objects['Camera'].location.z += table_height
+  
   # Add random jitter to camera position
   if args.camera_jitter > 0:
-    for i in range(3):
-      bpy.data.objects['Camera'].location[i] += rand(args.camera_jitter)
+    # X-position of the camera is translated in proximity of the table and objects
+    bpy.data.objects['Camera'].location.x += 5*rand(args.camera_jitter)
+    
+    # Y-position of the camera is translated in rotation
+    bpy.data.objects['Camera'].location.y += rand(args.camera_jitter)
+    
+    # Z-Position, camera has to be above table
+    print(table_height)
+    z_jitter = 2*rand(args.camera_jitter)
+    while(bpy.data.objects['Camera'].location.z  + z_jitter < table_height):
+      z_jitter = 2 *rand(args.camera_jitter)
+    bpy.data.objects['Camera'].location.z += z_jitter
 
-  # Figure out the left, up, and behind directions along the plane and record
-  # them in the scene structure
+
   camera = bpy.data.objects['Camera']
-  #plane_normal = plane.data.vertices[0].normal
-  #cam_behind = camera.matrix_world.to_quaternion() @ Vector((0, 0, -1))
-  #cam_left = camera.matrix_world.to_quaternion() @ Vector((-1, 0, 0))
-  #cam_up = camera.matrix_world.to_quaternion() @ Vector((0, 1, 0))
-  #plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
-  #plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
-  #plane_up = cam_up.project(plane_normal).normalized()
 
-  # Delete the plane; we only used it for normals anyway. The base scene file
-  # contains the actual ground plane.
-  #utils.delete_object(plane)
-
-  # Save all six axis-aligned directions in the scene struct
-  #scene_struct['directions']['behind'] = tuple(plane_behind)
-  # scene_struct['directions']['front'] = tuple(-plane_behind)
-  # scene_struct['directions']['left'] = tuple(plane_left)
-  # scene_struct['directions']['right'] = tuple(-plane_left)
-  # scene_struct['directions']['above'] = tuple(plane_up)
-  # scene_struct['directions']['below'] = tuple(-plane_up)
-
-  # Add random jitter to lamp positions
+   # Add random jitter to lamp positions
+  
   if args.key_light_jitter > 0:
     for i in range(3):
       bpy.data.objects['Lamp_Key'].location[i] += rand(args.key_light_jitter)
@@ -456,19 +457,26 @@ def compute_all_relationships(scene_struct):
       min_z_obj2 =  min([vec[2] for vec in obj2_bbox])
       max_z_obj1 = max([vec[2] for vec in obj1_bbox])
       max_z_obj2 =  max([vec[2] for vec in obj2_bbox])
+      min_x_obj1 = min([vec[0] for vec in obj1_bbox])
+      min_x_obj2 =  min([vec[0] for vec in obj2_bbox])
+      max_x_obj1 = max([vec[0] for vec in obj1_bbox])
+      max_x_obj2 =  max([vec[0] for vec in obj2_bbox])
+      min_y_obj1 = min([vec[1] for vec in obj1_bbox])
+      min_y_obj2 =  min([vec[1] for vec in obj2_bbox])
+      max_y_obj1 = max([vec[1] for vec in obj1_bbox])
+      max_y_obj2 =  max([vec[1] for vec in obj2_bbox])
       relationship = None
-      print(obj2.location.y)
-      print(obj2.location.x)
+
       # Position of obj1 relatively to obj2
       # BEHIND
-      if(obj1.location.y-obj2.location.y >= abs(obj1.location.x-obj2.location.x)*args.border_limit):
+      if(obj1.location.y-obj2.location.y > abs(obj1.location.x-obj2.location.x)*args.border_limit and max_x_obj1<min_x_obj2):
                 relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate:":BEHIND
                        }
       # FRONT OF
       elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit ):
+        obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_x_obj1 > max_x_obj2):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate:":FRONT
@@ -515,21 +523,27 @@ def compute_all_relationships(scene_struct):
                         "subject":obj2_struct["id"],
                         "predicate:":LEFT_FRONT
                        }
+      # Add the relationship to the array of relationships
+      if(relationship is not None):
+        all_relationships.append(relationship)
+        relationship = None
+
       # ON
-      
-      elif(min_z_obj1 - max_z_obj2 <= 0.001 and obj1.location>obj2.location):
+      if(abs(min_z_obj1 - max_z_obj2) <= 0.00001):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate:":ON
                         }
       # UNDER
-      elif(min_z_obj2 - max_z_obj1 <= 0.001  and obj1.location<obj2.location):
+      elif(abs(min_z_obj2 - max_z_obj1 )<= 0.000001):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate:":UNDER
                         }
       # Add the relationship to the array of relationships
-      all_relationships.append(relationship)
+      if(relationship is not None):
+        all_relationships.append(relationship)
+        relationship = None
 
   return all_relationships
 
@@ -642,7 +656,7 @@ def main(args):
     # Add some other objects...
 
     # Render scene...
-    render_scene(args,scene_struct)
+    render_scene(args,scene_struct,table_height)
   # # Read file with the 3d models list
   # try:
   #   with open(args.models_dir + "/models.json", "r") as read_file:
