@@ -30,7 +30,6 @@ for json_file in json_files:
             cv.rectangle(img,obj['2d_bbox'][0],obj['2d_bbox'][1],(0,0,250),2)
 
 
-
         # Resize the image to add some text
         blank_image = np.zeros((height,width+300,3), np.uint8)
         blank_image[:,:] = (255,255,255)

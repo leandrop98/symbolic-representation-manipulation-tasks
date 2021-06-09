@@ -25,6 +25,7 @@ NEAR = "near"
 FAR = "far"
 INSIDE = "inside"
 OUTSIDE = "outside"
+INSIDE_UP = "inside_up"
 
 relationships = [LEFT,RIGHT,UNDER,ON,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT,INSIDE]
 
@@ -345,8 +346,10 @@ def add_two_objects(args,scene_struct, objects_category, objects_id, relationshi
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
   min_z_obj1 = min([vec[2] for vec in bbverts_obj1])
   min_z_obj2 = min([vec[2] for vec in bbverts_obj2])
+
   obj_object1.location.z += -min_z_obj1 + table_height
   obj_object2.location.z += -min_z_obj2 + table_height
+
 
   # Apply the relationshiop to the second object
   border_limit = args.border_limit
@@ -400,11 +403,21 @@ def add_two_objects(args,scene_struct, objects_category, objects_id, relationshi
   elif(relationship==INSIDE):
     x_pos = 0
     y_pos = 0
-    z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
-    obj_object2.location.z += z_pos[2]
-
+    obj_object2.location.z += 0.1
+  elif(relationship==INSIDE_UP):
+    z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
+    obj_object2.location.y = 0
+    obj_object2.location.x = 0
+    obj_object2.delta_rotation_euler =  Euler((0,3.14, 0), 'XYZ')
+    bpy.context.view_layer.update() 
+    bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
+    max_z_obj1 = max([vec[2] for vec in bbverts_obj1])
+    bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
+    max_z_obj2 = max([vec[2] for vec in bbverts_obj2])
+    obj_object2.location.z = max_z_obj1-(max_z_obj2 - obj_object2.location.z)+0.1
+   
 
   ## Override context due to blender 
   for window in bpy.context.window_manager.windows:
@@ -563,7 +576,7 @@ def compute_all_relationships(args,scene_struct):
   integers, where output[rel][i] gives a list of object indices that have the
   relationship rel with object i. For example if j is in output['left'][i] then
   object j is left of object i. """
-
+  bpy.context.view_layer.update() 
   all_relationships = []
   for obj1_struct in scene_struct['objects']:
     for obj2_struct in scene_struct['objects']:
@@ -589,16 +602,23 @@ def compute_all_relationships(args,scene_struct):
       max_y_obj1 = max([vec[1] for vec in obj1_bbox])
       max_y_obj2 =  max([vec[1] for vec in obj2_bbox])
       relationship = None
-
       # Position of obj1 relatively to obj2
+      # INSIDE
+      if(min_y_obj1>min_y_obj2 and max_y_obj1<max_y_obj2 and min_x_obj1>min_x_obj2 and max_x_obj1<max_x_obj2 
+      and (max_z_obj2-min_z_obj2) + (max_z_obj1-min_z_obj1) > abs(max(max_z_obj1,max_z_obj2) - min(min_z_obj1,min_z_obj2)) ):
+        relationship = {"object":obj1_struct["id"],
+                      "subject":obj2_struct["id"],
+                      "predicate":INSIDE
+      }
       # ON
-      if(abs(min_z_obj1 - max_z_obj2) <= 0.00001):
+      elif((abs(min_z_obj1 - max_z_obj2) <= 0.001 or abs(max_z_obj1 - max_z_obj2) <= 0.2) and
+      math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2)) <=0.1 ):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":ON
                         }
       # UNDER
-      elif(abs(min_z_obj2 - max_z_obj1 )<= 0.000001):
+      elif(abs(min_z_obj2 - max_z_obj1 )<= 0.001):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":UNDER
@@ -608,56 +628,57 @@ def compute_all_relationships(args,scene_struct):
                 relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":BEHIND
-                       }
+                      }
       # FRONT OF
       elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_x_obj1 > max_x_obj2):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":FRONT
-                       }
+                      }
       # LEFT
       elif(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit ):
+        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<min_y_obj2):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":LEFT
-                       }
+                      }
       # RIGHT
       elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit ):
+        obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_y_obj1>max_y_obj2):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":RIGHT
-                       }
+                      }
       # RIGHT_BEHIND
       elif(obj1.location.y-obj2.location.y >=  (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y <= args.border_limit*(obj1.location.x-obj2.location.x) ):
+        obj1.location.y-obj2.location.y <= args.border_limit*(obj1.location.x-obj2.location.x) 
+        and min_y_obj1>max_y_obj2 and max_x_obj1<min_x_obj2 ):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":RIGHT_BEHIND
-                       }
+                      }
       # LEFT_BEHIND
       elif(obj1.location.y-obj2.location.y >=  -(obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x) ):
+        obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x)and max_y_obj1<min_y_obj2 and max_x_obj1<min_x_obj2):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":LEFT_BEHIND
-                       }
+                      }
       # RIGHT_FRONT
       elif(obj1.location.y-obj2.location.y >=  -args.border_limit*(obj1.location.x-obj2.location.x) and
-        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit):
+        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and min_y_obj1>max_y_obj2 and min_x_obj1 > max_x_obj2):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":RIGHT_FRONT
-                       }
+                      }
       # LEFT_FRONT
       elif(obj1.location.y-obj2.location.y >= -args.border_limit*(obj1.location.x-obj2.location.x)and
-        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit):
+        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<min_y_obj2 and min_x_obj1 > max_x_obj2):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":LEFT_FRONT
-                       }
+                      }
        
                   
       # Add the relationship to the array of relationships
@@ -685,11 +706,19 @@ def compute_all_relationships(args,scene_struct):
           all_relationships.append(relationship)
           relationship = None
 
-
-      # Add the relationship to the array of relationships
-      if(relationship is not None):
-        all_relationships.append(relationship)
-        relationship = None
+      # If the objects are not tables
+      if(obj1_struct["category"] !='Table' and obj2_struct["category"]!='Table' ):
+        # INSIDE
+        if(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) <= 0.1
+        and min_x_obj2>min_x_obj1 and max_x_obj2<max_x_obj1):
+          relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
+                        "predicate":INSIDE
+        }
+        # Add the relationship to the array of relationships
+        if(relationship is not None):
+          all_relationships.append(relationship)
+          relationship = None
 
   return all_relationships
 
@@ -779,7 +808,7 @@ def add_random_table(args, scene_struct, table_ids):
   
   return scene_struct, table_height
 
-def draw_bounding_box(bb_verts):
+def draw_bounding_box_points(bb_verts):
   for bbvert in bb_verts:
     # Create an empty mesh and the object.
     mesh = bpy.data.meshes.new('Basic_Sphere')
@@ -814,27 +843,30 @@ def main(args):
 
     # Load the main blendfile
     bpy.ops.wm.open_mainfile(filepath='data/base_scene.blend')
-    
-    scene_struct, table_height = add_random_table(args,scene_struct,table_ids)
 
+    scene_struct, table_height = add_random_table(args,scene_struct,table_ids)
     bottles = models_dict["Bottle"]
     mugs = models_dict["Mug"]
-    scene_struct = add_two_objects(args,scene_struct,["Bottle","Mug"],[bottles[0],mugs[0]],LEFT,table_height)
-
-    # Add some other objects...
-
-    # Render scene...
-    render_scene(args,scene_struct,table_height)
+      
+    # Read JSON file with models configuration
+    # Define if model can have things inside or not 
+    # Use that information to generate images and relationships
+    
 
     # TASKS
 
     # Generate images with mug, bottle and books
+    scene_struct = add_two_objects(args,scene_struct,["Mug","Bottle"],[mugs[0],bottles[0]],INSIDE,table_height)
+
+
 
 
     # Organization task, pencils inside cup, books, pencil outside cup
 
     # Generate images with cubes and stacking cubes
 
+    # Render scene...
+    render_scene(args,scene_struct,table_height)
 
 
   # # Read file with the 3d models list
