@@ -257,7 +257,6 @@ def render_scene(args,scene_struct,table_height,
     bpy.data.objects['Camera'].location.y +=  random.uniform(-args.camera_jitter,args.camera_jitter)#5*rand(args.camera_jitter)
     
     # Z-Position, camera has to be above table
-    print(table_height)
     z_jitter = 2*rand(args.camera_jitter)
     while(bpy.data.objects['Camera'].location.z  + z_jitter < table_height):
       z_jitter = 2 *rand(args.camera_jitter)
@@ -277,12 +276,20 @@ def render_scene(args,scene_struct,table_height,
   if args.fill_light_jitter > 0:
     for i in range(3):
       bpy.data.objects['Lamp_Fill'].location[i] += rand(args.fill_light_jitter)
+  
+  bpy.context.view_layer.update() 
 
   # Get bounding boxes of all objects
   for obj_struct in scene_struct['objects']:
     bbverts = [bpy.data.objects[obj_struct['scene_object_name']].matrix_world@Vector(bbvert) for bbvert in bpy.data.objects[obj_struct['scene_object_name']].bound_box]
-    bbox_3d_obj = [utils.get_camera_coords(camera, bbvert) for bbvert in bbverts]
+    bbox_3d_obj = [utils.get_camera_coords(camera,bbvert) for bbvert in bbverts]
     obj_struct["3d_bbox"] = bbox_3d_obj
+    print(bbox_3d_obj)
+    all_x = [point[0] for point in bbox_3d_obj]
+    all_y = [point[1] for point in bbox_3d_obj]
+
+    # We only need top-left and bottom-right
+    obj_struct["2d_bbox"] = [(min(all_x),max(all_y)),(max(all_x),min(all_y))]
 
   scene_struct['image_filename'] =  os.path.basename(output_image_id+".png")
   scene_struct['relationships'] = compute_all_relationships(args,scene_struct)
@@ -301,8 +308,6 @@ def render_scene(args,scene_struct,table_height,
 
   if output_blendfile is not None:
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
-
-
 
 
 def add_two_objects(args,scene_struct, objects_category, objects_id, relationship,table_height):
@@ -551,7 +556,6 @@ def add_object(args,scene_struct, object_subject, object_predicate_category,obje
 
   return scene_struct
 
-
 def compute_all_relationships(args,scene_struct):
   """ Computes relationships between all pairs of objects in the scene.
   
@@ -587,97 +591,99 @@ def compute_all_relationships(args,scene_struct):
       relationship = None
 
       # Position of obj1 relatively to obj2
+      # ON
+      if(abs(min_z_obj1 - max_z_obj2) <= 0.00001):
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
+                        "predicate":ON
+                        }
+      # UNDER
+      elif(abs(min_z_obj2 - max_z_obj1 )<= 0.000001):
+        relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
+                        "predicate":UNDER
+        }
       # BEHIND
-      if(obj1.location.y-obj2.location.y > abs(obj1.location.x-obj2.location.x)*args.border_limit and max_x_obj1<min_x_obj2):
+      elif(obj1.location.y-obj2.location.y > abs(obj1.location.x-obj2.location.x)*args.border_limit and max_x_obj1<min_x_obj2):
                 relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
-                        "predicate:":BEHIND
+                        "predicate":BEHIND
                        }
       # FRONT OF
       elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_x_obj1 > max_x_obj2):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
-                        "predicate:":FRONT
+                        "predicate":FRONT
                        }
       # LEFT
       elif(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit ):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
-                        "predicate:":LEFT
+                        "predicate":LEFT
                        }
       # RIGHT
       elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit ):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
-                        "predicate:":RIGHT
+                        "predicate":RIGHT
                        }
       # RIGHT_BEHIND
       elif(obj1.location.y-obj2.location.y >=  (obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y <= args.border_limit*(obj1.location.x-obj2.location.x) ):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
-                        "predicate:":RIGHT_BEHIND
+                        "predicate":RIGHT_BEHIND
                        }
       # LEFT_BEHIND
       elif(obj1.location.y-obj2.location.y >=  -(obj1.location.x-obj2.location.x)/args.border_limit and
         obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x) ):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
-                        "predicate:":LEFT_BEHIND
+                        "predicate":LEFT_BEHIND
                        }
       # RIGHT_FRONT
       elif(obj1.location.y-obj2.location.y >=  -args.border_limit*(obj1.location.x-obj2.location.x) and
         obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
-                        "predicate:":RIGHT_FRONT
+                        "predicate":RIGHT_FRONT
                        }
       # LEFT_FRONT
       elif(obj1.location.y-obj2.location.y >= -args.border_limit*(obj1.location.x-obj2.location.x)and
         obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit):
         relationship = {"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
-                        "predicate:":LEFT_FRONT
+                        "predicate":LEFT_FRONT
                        }
-      # Add the relationship to the array of relationships
-      if(relationship is not None):
-        all_relationships.append(relationship)
-        relationship = None
-
-      # ON
-      if(abs(min_z_obj1 - max_z_obj2) <= 0.00001):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate:":ON
-                        }
-      # UNDER
-      elif(abs(min_z_obj2 - max_z_obj1 )<= 0.000001):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate:":UNDER
-        }
+       
                   
-      # NEAR
-      elif(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) <= args.radius_near_far ):
-        relationship = {"object":obj1_struct["id"],
-                      "subject":obj2_struct["id"],
-                      "predicate:":NEAR
-      }
-
-      # FAR
-      elif(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) > args.radius_near_far ):
-        relationship = {"object":obj1_struct["id"],
-                      "subject":obj2_struct["id"],
-                      "predicate:":FAR
-      }
-
       # Add the relationship to the array of relationships
       if(relationship is not None):
         all_relationships.append(relationship)
         relationship = None
+
+      if(obj1_struct["category"] !='Table' and obj2_struct["category"]!='Table' ):
+        # NEAR
+        if(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) <= args.radius_near_far ):
+          relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
+                        "predicate":NEAR
+        }
+
+        # FAR
+        elif(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) > args.radius_near_far ):
+          relationship = {"object":obj1_struct["id"],
+                        "subject":obj2_struct["id"],
+                        "predicate":FAR
+        }
+
+        # Add the relationship to the array of relationships
+        if(relationship is not None):
+          all_relationships.append(relationship)
+          relationship = None
 
 
       # Add the relationship to the array of relationships
@@ -773,6 +779,29 @@ def add_random_table(args, scene_struct, table_ids):
   
   return scene_struct, table_height
 
+def draw_bounding_box(bb_verts):
+  for bbvert in bb_verts:
+    # Create an empty mesh and the object.
+    mesh = bpy.data.meshes.new('Basic_Sphere')
+    basic_sphere = bpy.data.objects.new("Basic_Sphere", mesh)
+
+    # Add the object into the scene.
+    bpy.context.collection.objects.link(basic_sphere)
+
+    # Select the newly created object
+    bpy.context.view_layer.objects.active = basic_sphere
+    basic_sphere.select_set(True)
+    basic_sphere.dimensions = (0.1,0.1,0.1)
+    basic_sphere.location = bbvert
+
+    # Construct the bmesh sphere and assign it to the blender mesh.
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=16, diameter=1)
+    bm.to_mesh(mesh)
+    bm.free()
+
+
+
 def main(args):
   scene_struct = {"objects":[], "relationships":[]}
  
@@ -789,8 +818,8 @@ def main(args):
     scene_struct, table_height = add_random_table(args,scene_struct,table_ids)
 
     bottles = models_dict["Bottle"]
-    bowls = models_dict["Bowl"]
-    scene_struct = add_two_objects(args,scene_struct,["Bottle","Bowl"],[bottles[0],bowls[0]],LEFT,table_height)
+    mugs = models_dict["Mug"]
+    scene_struct = add_two_objects(args,scene_struct,["Bottle","Mug"],[bottles[0],mugs[0]],LEFT,table_height)
 
     # Add some other objects...
 
@@ -805,7 +834,6 @@ def main(args):
     # Organization task, pencils inside cup, books, pencil outside cup
 
     # Generate images with cubes and stacking cubes
-
 
 
 
@@ -824,7 +852,6 @@ def main(args):
   #
   # except FileNotFoundError:
   #   print("File \"" + args.models_dir + "/objects.json" +"\" was not found!")
-
 
 if __name__ == '__main__':
   if INSIDE_BLENDER:
