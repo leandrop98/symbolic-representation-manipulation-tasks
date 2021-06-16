@@ -348,13 +348,19 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
   scene_objects.append(obj_object2)
 
-  bpy.context.view_layer.update() 
-  # Change z location to put objects in the table
+  #bpy.context.view_layer.update() 
   
+  obj1_dimensions = obj_object1.matrix_world@obj_object1.dimensions 
+  obj2_dimensions = obj_object2.matrix_world@obj_object2.dimensions 
+
+
+
   bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
   min_z_obj1 = min([vec[2] for vec in bbverts_obj1])
   min_z_obj2 = min([vec[2] for vec in bbverts_obj2])
+
+  #Put objects in the table
 
   obj_object1.location.z += -min_z_obj1 + table_height
   obj_object2.location.z += -min_z_obj2 + table_height
@@ -364,74 +370,99 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   max_y = max([point[1]for point in table_limit_points])
   min_y = min([point[1]for point in table_limit_points])
 
+  bpy.context.view_layer.update() 
+  
+  bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
+  bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
+  #  Dimensions of objects after rotation
+  obj1_dimension_x = abs(min(bbvert [0] for bbvert in bbverts_obj1)) + abs(max(bbvert [0] for bbvert in bbverts_obj1)) 
+  obj1_dimension_y = abs(min(bbvert [1] for bbvert in bbverts_obj1)) + abs(max(bbvert [1] for bbvert in bbverts_obj1)) 
+  obj2_dimension_x = abs(min(bbvert [0] for bbvert in bbverts_obj2)) + abs(max(bbvert [0] for bbvert in bbverts_obj2)) 
+  obj2_dimension_y = abs(min(bbvert [1] for bbvert in bbverts_obj2)) + abs(max(bbvert [1] for bbvert in bbverts_obj2)) 
+
   # Apply the relationshiop to the second object
   border_limit = args.border_limit
-  if(relationship==LEFT):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*min_y
-    x_pos =  random.uniform(y_pos/border_limit, -y_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==RIGHT):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_y
-    x_pos =  random.uniform(-y_pos/border_limit, y_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==FRONT):
-    x_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_x
-    y_pos = random.uniform(-x_pos/border_limit, x_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==BEHIND):
-    x_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*min_x
-    y_pos =  random.uniform(x_pos/border_limit, -x_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==LEFT_BEHIND):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_y 
-    x_pos =  random.uniform(y_pos*border_limit, y_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==RIGHT_BEHIND):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_y
-    x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==LEFT_FRONT):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*min_y
-    x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==RIGHT_FRONT):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_y
-    x_pos =  random.uniform(y_pos/border_limit, y_pos*border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==ON):
-    x_pos = random.uniform(-obj_object1.dimensions.x/2 , obj_object1.dimensions.x/2) 
-    y_pos = random.uniform(-obj_object1.dimensions.y/2 , obj_object1.dimensions.y/2) 
-    z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
-    #obj_object2.location.y = y_pos
-    #obj_object2.location.x = x_pos
-    obj_object2.location.z += z_pos[2]
-  elif(relationship==INSIDE):
-    x_pos = 0
-    y_pos = 0
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-    obj_object2.location.z += 0.1
-  elif(relationship==INSIDE_UP):
-    z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
-    obj_object2.location.y = 0
-    obj_object2.location.x = 0
-    obj_object2.delta_rotation_euler =  Euler((0,3.14, 0), 'XYZ')
+  inside_table = False
+
+  # Check these conditions that are wrong
+  while(inside_table==False):
+    if(relationship==LEFT):
+      y_pos = random.uniform(-((obj1_dimension_y) /2 + (obj2_dimension_y)/2), min_y)
+      x_pos =  random.uniform(y_pos/border_limit, -y_pos/border_limit)
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+    elif(relationship==RIGHT):
+      y_pos = random.uniform(((obj1_dimension_y) /2 + (obj2_dimension_y)/2),max_y)
+      x_pos =  random.uniform(-y_pos/border_limit, y_pos/border_limit)
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+    elif(relationship==FRONT):
+      x_pos = random.uniform(((obj1_dimension_y) /2 + (obj2_dimension_y)/2), max_x)
+      y_pos = random.uniform(-x_pos/border_limit, x_pos/border_limit)
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+    elif(relationship==BEHIND):
+      x_pos =  random.uniform(-((obj1_dimension_y) /2 + (obj2_dimension_y)/2), min_x)
+      y_pos =  random.uniform(x_pos/border_limit, -x_pos/border_limit)
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+    elif(relationship==LEFT_BEHIND):
+      y_pos = random.uniform(-((obj1_dimension_y) /2 + (obj2_dimension_y)/2), random.random()*max_y)
+      x_pos =  random.uniform(y_pos*border_limit, y_pos/border_limit)
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+    elif(relationship==RIGHT_BEHIND):
+      y_pos = random.uniform(((obj1_dimension_y) /2 + (obj2_dimension_y)/2), max_y)
+      x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+    elif(relationship==LEFT_FRONT):
+      y_pos = random.uniform(-((obj1_dimension_y) /2 + (obj2_dimension_y)/2), min_y)
+      x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+    elif(relationship==RIGHT_FRONT):
+      y_pos = random.uniform(((obj1_dimension_y) /2 + (obj2_dimension_y)/2), random.random())
+      x_pos =  random.uniform(y_pos/border_limit, y_pos*border_limit)
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+    elif(relationship==ON):
+      x_pos = 0
+      y_pos = 0 
+      z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
+      #obj_object2.location.y = y_pos
+      #obj_object2.location.x = x_pos
+      obj_object2.location.z += z_pos[2]
+    elif(relationship==INSIDE):
+      x_pos = 0
+      y_pos = 0
+      obj_object2.location.y = y_pos
+      obj_object2.location.x = x_pos
+      obj_object2.location.z += 0.1
+    elif(relationship==INSIDE_UP):
+      z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
+      obj_object2.location.y = 0
+      obj_object2.location.x = 0
+      obj_object2.delta_rotation_euler =  Euler((0,3.14, 0), 'XYZ')
+      bpy.context.view_layer.update() 
+      bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
+      max_z_obj1 = max([vec[2] for vec in bbverts_obj1])
+      bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
+      max_z_obj2 = max([vec[2] for vec in bbverts_obj2])
+      obj_object2.location.z = max_z_obj1-(max_z_obj2 - obj_object2.location.z)+0.1
+    
+    all_x = [point[0] for point in table_limit_points]
+    all_y = [point[1] for point in table_limit_points]
+
     bpy.context.view_layer.update() 
-    bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
-    max_z_obj1 = max([vec[2] for vec in bbverts_obj1])
-    bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
-    max_z_obj2 = max([vec[2] for vec in bbverts_obj2])
-    obj_object2.location.z = max_z_obj1-(max_z_obj2 - obj_object2.location.z)+0.1
-  
-  #check_position_validity(scene_struct,obj_object2,table_limit_points)
+
+    # Check if the 2nd object is inside the table
+    if (obj_object2.location.x<=max_x and obj_object2.location.x>=min_x and obj_object2.location.y<=max_y and obj_object2.location.y>min_y):
+      inside_table = True
+
+
+  bpy.context.view_layer.update() 
+
 
   ## Override context due to blender 
   for window in bpy.context.window_manager.windows:
@@ -471,115 +502,6 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
 
   return None, None
 
-def add_object(args,scene_struct, object_subject, object_predicate_category,object_predicate_id, relationship,table_height):
-    
-  """
-  Add one object to the current blender scene with a relationship to another object in the scene
-  """
-
-  # Get the path of the object to add to the scene
-  obj2_path = args.models_dir + "/" +object_predicate_category+ "/" +  object_predicate_id + "/models/model_normalized.obj"
-  
-  scene_objects = []
-
-  # Import Object 1 in the scene in the center position with random z orientation
-  obj_object1 = object_subject
-
-  # Import Object 2 in the scene in the center position with random z orientation
-  imported_object = bpy.ops.import_scene.obj(filepath=obj2_path)
-  selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
-  obj_object2 = selected_objects[0] 
-  obj_object2.name = "Object2_" + relationship + "_" +  str(datetime.now())
-  obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
-  scene_objects.append(obj_object2)
-
-  # Change z location to put objects in the floor
-  
-  bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
-  bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
-  min_z_obj1 = min([vec[2] for vec in bbverts_obj1])
-  min_z_obj2 = min([vec[2] for vec in bbverts_obj2])
-  obj_object1.location.z += -min_z_obj1 + table_height
-  obj_object2.location.z += -min_z_obj2 + table_height
-
-  # Apply the relationshiop to the second object
-  border_limit = args.border_limit
-  if(relationship==LEFT):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
-    x_pos =  random.uniform(y_pos/border_limit, -y_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==RIGHT):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
-    x_pos =  random.uniform(-y_pos/border_limit, y_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==FRONT):
-    x_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
-    y_pos = random.uniform(-x_pos/border_limit, x_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==BEHIND):
-    x_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
-    y_pos =  random.uniform(x_pos/border_limit, -x_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==LEFT_BEHIND):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
-    x_pos =  random.uniform(y_pos*border_limit, y_pos/border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==RIGHT_BEHIND):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
-    x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==LEFT_FRONT):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
-    x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==RIGHT_FRONT):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
-    x_pos =  random.uniform(y_pos/border_limit, y_pos*border_limit)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-  elif(relationship==ON):
-    x_pos = random.uniform(-obj_object1.dimensions.x/2 , obj_object1.dimensions.x/2) 
-    y_pos = random.uniform(-obj_object1.dimensions.y/2 , obj_object1.dimensions.y/2) 
-    z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
-    #obj_object2.location.y = y_pos
-    #obj_object2.location.x = x_pos
-    obj_object2.location.z += z_pos[2]
-  elif(relationship==INSIDE):
-    x_pos = 0
-    y_pos = 0
-    z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
-    obj_object2.location.y = y_pos
-    obj_object2.location.x = x_pos
-    obj_object2.location.z += z_pos[2]
-
-
-  ## Override context due to blender 
-  for window in bpy.context.window_manager.windows:
-    screen = window.screen
-
-    for area in screen.areas:
-        if area.type == 'VIEW_3D':
-            override = {'window': window, 'screen': screen, 'area': area}
-            bpy.ops.screen.screen_full_area(override)
-            break
-
-  obj1_metadata = {
-    'id':str(uuid.uuid1()),
-    'shapenet_id': object_predicate_id,
-    'scene_object_name': obj_object1.name,
-    'category': object_predicate_category,
-    '3d_bbox': None, # It has to be calculated later with the camera information
-  }
-  scene_struct['objects'].extend([obj1_metadata])
-
-  return scene_struct
 
 def compute_all_relationships(args,scene_struct):
   """ Computes relationships between all pairs of objects in the scene.
@@ -767,7 +689,7 @@ def add_random_table(args, scene_struct, table_model_paths):
   selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
   obj_object = selected_objects[0] 
   obj_object.name = "Table"
-  obj_object.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
+  #obj_object.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
   
   # Change table scale
   obj_object.scale.x=10
@@ -811,7 +733,7 @@ def add_random_table(args, scene_struct, table_model_paths):
   all_y = [point[1] for point in bbverts_obj]
   all_z = [point[2] for point in bbverts_obj]
  
-  table_limit_points = list( sorted(zip(all_z, bbverts_obj), reverse=True)[:4])
+  table_limit_points = [point[1] for point in list( sorted(zip(all_z, bbverts_obj), reverse=True)[:4])]
 #   print(top_points)
 #   all_y = [point[1][1] for point in top_points]
 #   print(all_y)
@@ -998,7 +920,7 @@ def main(args):
 
 
   # Generate images with mug, bottle and books
-  for i in range(1):
+  for i in range(10):
     
     # Initialize scene struct
     scene_struct = {"objects":[], "relationships":[]}
@@ -1020,7 +942,7 @@ def main(args):
     relationship = random.choice(possible_relationships)
     scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],RIGHT,table_height,table_limit_points)
     render_scene(args,scene_struct,table_height)
-    bpy.ops.wm.quit_blender()
+  #bpy.ops.wm.quit_blender()
 
     ### !!!!!! Things to do !!!!!!
     # Make 3d models good!
