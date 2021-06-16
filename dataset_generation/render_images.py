@@ -10,6 +10,8 @@ from mathutils import Euler
 import math
 from datetime import datetime
 import uuid
+import shutil
+import operator
 
 LEFT = "left"
 RIGHT = "right"
@@ -27,7 +29,8 @@ INSIDE = "inside"
 OUTSIDE = "outside"
 INSIDE_UP = "inside_up"
 
-relationships = [LEFT,RIGHT,UNDER,ON,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT,INSIDE]
+relationships = [LEFT,RIGHT,UNDER,ON,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT,INSIDE,INSIDE_UP]
+relationships = [LEFT,RIGHT,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT]
 
 
 ## SHAPE NET Test Query
@@ -134,6 +137,8 @@ parser.add_argument('--split', default='new',
 parser.add_argument('--output_image_dir', default='../output/images/',
     help="The directory where output images will be stored. It will be " +
          "created if it does not exist.")
+parser.add_argument('--delete_previous_images', default=False,
+    help="Delete previous generated images from the directory where output images will be stored.")
 parser.add_argument('--output_scene_dir', default='../output/scenes/',
     help="The directory where output JSON scene structures will be stored. " +
          "It will be created if it does not exist.")
@@ -280,12 +285,17 @@ def render_scene(args,scene_struct,table_height,
   
   bpy.context.view_layer.update() 
 
+
+
+  # Check if objects are visible in the picture?
+  #check_visibility(scene_struct,100)
+
+  
   # Get bounding boxes of all objects
   for obj_struct in scene_struct['objects']:
     bbverts = [bpy.data.objects[obj_struct['scene_object_name']].matrix_world@Vector(bbvert) for bbvert in bpy.data.objects[obj_struct['scene_object_name']].bound_box]
     bbox_3d_obj = [utils.get_camera_coords(camera,bbvert) for bbvert in bbverts]
     obj_struct["3d_bbox"] = bbox_3d_obj
-    print(bbox_3d_obj)
     all_x = [point[0] for point in bbox_3d_obj]
     all_y = [point[1] for point in bbox_3d_obj]
 
@@ -310,23 +320,21 @@ def render_scene(args,scene_struct,table_height,
   if output_blendfile is not None:
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
 
-
-def add_two_objects(args,scene_struct, objects_category, objects_id, relationship,table_height):
+def add_two_objects(args,scene_struct, objects_category, objects_path, relationship,table_height,table_limit_points):
   
   """
   Add two objects to the current blender scene
   """
 
   # Get the path of the objects to add to the scene
-  obj1_path = args.models_dir + "/" + objects_category[0] + "/" +  objects_id[0]  + "/models/model_normalized.obj"
-  obj2_path = args.models_dir + "/" + objects_category[1] + "/" +  objects_id[1]  + "/models/model_normalized.obj"
+  obj1_path = objects_path[0] # args.models_dir + "/" + objects_category[0] + "/" +  objects_id[0]  + "/models/model_normalized.obj"
+  obj2_path =  objects_path[1] # args.models_dir + "/" + objects_category[1] + "/" +  objects_id[1]  + "/models/model_normalized.obj"
   
   scene_objects = []
 
   # Import Object 1 in the scene in the center position with random z orientation
   imported_object = bpy.ops.import_scene.obj(filepath=obj1_path)
   selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
-  print(selected_objects)
   obj_object1 = selected_objects[0] 
   obj_object1.name = "Object1_" + relationship+ "_" + str(datetime.now())
   obj_object1.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
@@ -340,7 +348,8 @@ def add_two_objects(args,scene_struct, objects_category, objects_id, relationshi
   obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
   scene_objects.append(obj_object2)
 
-  # Change z location to put objects in the floor
+  bpy.context.view_layer.update() 
+  # Change z location to put objects in the table
   
   bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
@@ -350,46 +359,50 @@ def add_two_objects(args,scene_struct, objects_category, objects_id, relationshi
   obj_object1.location.z += -min_z_obj1 + table_height
   obj_object2.location.z += -min_z_obj2 + table_height
 
+  max_x = max([point[0]for point in table_limit_points])
+  min_x = min([point[0]for point in table_limit_points])
+  max_y = max([point[1]for point in table_limit_points])
+  min_y = min([point[1]for point in table_limit_points])
 
   # Apply the relationshiop to the second object
   border_limit = args.border_limit
   if(relationship==LEFT):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
+    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*min_y
     x_pos =  random.uniform(y_pos/border_limit, -y_pos/border_limit)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
   elif(relationship==RIGHT):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
+    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_y
     x_pos =  random.uniform(-y_pos/border_limit, y_pos/border_limit)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
   elif(relationship==FRONT):
-    x_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
+    x_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_x
     y_pos = random.uniform(-x_pos/border_limit, x_pos/border_limit)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
   elif(relationship==BEHIND):
-    x_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
+    x_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*min_x
     y_pos =  random.uniform(x_pos/border_limit, -x_pos/border_limit)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
   elif(relationship==LEFT_BEHIND):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
+    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_y 
     x_pos =  random.uniform(y_pos*border_limit, y_pos/border_limit)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
   elif(relationship==RIGHT_BEHIND):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
+    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_y
     x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
   elif(relationship==LEFT_FRONT):
-    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
+    y_pos = -((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*min_y
     x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
   elif(relationship==RIGHT_FRONT):
-    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2 + random.random()*0.3) 
+    y_pos = ((obj_object1.dimensions.y) /2 + (obj_object2.dimensions.y)/2) + random.random()*max_y
     x_pos =  random.uniform(y_pos/border_limit, y_pos*border_limit)
     obj_object2.location.y = y_pos
     obj_object2.location.x = x_pos
@@ -417,7 +430,8 @@ def add_two_objects(args,scene_struct, objects_category, objects_id, relationshi
     bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
     max_z_obj2 = max([vec[2] for vec in bbverts_obj2])
     obj_object2.location.z = max_z_obj1-(max_z_obj2 - obj_object2.location.z)+0.1
-   
+  
+  #check_position_validity(scene_struct,obj_object2,table_limit_points)
 
   ## Override context due to blender 
   for window in bpy.context.window_manager.windows:
@@ -431,14 +445,12 @@ def add_two_objects(args,scene_struct, objects_category, objects_id, relationshi
 
   obj1_metadata = {
     'id':str(uuid.uuid1()),
-    'shapenet_id': objects_id[0],
     'scene_object_name':obj_object1.name,
     'category': objects_category[0],
     '3d_bbox': None, # It has to be calculated later with the camera information
   }
   obj2_metadata = {
     'id':str(uuid.uuid1()),
-    'shapenet_id': objects_id[1],
     'scene_object_name':obj_object2.name,
     'category': objects_category[1],
     '3d_bbox': None, # It has to be calculated later with the camera information
@@ -601,124 +613,117 @@ def compute_all_relationships(args,scene_struct):
       min_y_obj2 =  min([vec[1] for vec in obj2_bbox])
       max_y_obj1 = max([vec[1] for vec in obj1_bbox])
       max_y_obj2 =  max([vec[1] for vec in obj2_bbox])
-      relationship = None
       # Position of obj1 relatively to obj2
+      print(obj1_struct['category'] + ": " + str(obj1.location))
+      print(obj2_struct['category'] + ": " +  str(obj2.location))
+      print(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit)
+      print(obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit)
+    
+
       # INSIDE
       if(min_y_obj1>min_y_obj2 and max_y_obj1<max_y_obj2 and min_x_obj1>min_x_obj2 and max_x_obj1<max_x_obj2 
-      and (max_z_obj2-min_z_obj2) + (max_z_obj1-min_z_obj1) > abs(max(max_z_obj1,max_z_obj2) - min(min_z_obj1,min_z_obj2)) ):
-        relationship = {"object":obj1_struct["id"],
+      and (max_z_obj2-min_z_obj2) + (max_z_obj1-min_z_obj1) > 0.0001 + abs(max(max_z_obj1,max_z_obj2) - min(min_z_obj1,min_z_obj2)) and
+      obj1_struct["category"] !='Table' and obj2_struct["category"]!='Table' ): # height of both objects must be higher that the distances of extremes of both objects 
+        all_relationships.extend([{"object":obj1_struct["id"],
                       "subject":obj2_struct["id"],
                       "predicate":INSIDE
-      }
+        }])
+        if(abs(max_z_obj2-max_z_obj1)<0.1):
+           all_relationships.append({"object":obj2_struct["id"],
+                      "subject":obj1_struct["id"],
+                      "predicate":ON
+          })
       # ON
-      elif((abs(min_z_obj1 - max_z_obj2) <= 0.001 or abs(max_z_obj1 - max_z_obj2) <= 0.2) and
-      math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2)) <=0.1 ):
-        relationship = {"object":obj1_struct["id"],
+      elif((abs(min_z_obj1 - max_z_obj2) <= 0.001) 
+        and (max_z_obj2-min_z_obj2) + (max_z_obj1-min_z_obj1) - abs(max(max_z_obj1,max_z_obj2) - min(min_z_obj1,min_z_obj2)) <0.001 ):
+        all_relationships.extend([{"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":ON
-                        }
+                        }])
       # UNDER
       elif(abs(min_z_obj2 - max_z_obj1 )<= 0.001):
-        relationship = {"object":obj1_struct["id"],
+        all_relationships.extend([{"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":UNDER
-        }
-      # BEHIND
-      elif(obj1.location.y-obj2.location.y > abs(obj1.location.x-obj2.location.x)*args.border_limit and max_x_obj1<min_x_obj2):
-                relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":BEHIND
-                      }
-      # FRONT OF
-      elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_x_obj1 > max_x_obj2):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":FRONT
-                      }
-      # LEFT
-      elif(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<min_y_obj2):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":LEFT
-                      }
-      # RIGHT
-      elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_y_obj1>max_y_obj2):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":RIGHT
-                      }
-      # RIGHT_BEHIND
-      elif(obj1.location.y-obj2.location.y >=  (obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y <= args.border_limit*(obj1.location.x-obj2.location.x) 
-        and min_y_obj1>max_y_obj2 and max_x_obj1<min_x_obj2 ):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":RIGHT_BEHIND
-                      }
-      # LEFT_BEHIND
-      elif(obj1.location.y-obj2.location.y >=  -(obj1.location.x-obj2.location.x)/args.border_limit and
-        obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x)and max_y_obj1<min_y_obj2 and max_x_obj1<min_x_obj2):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":LEFT_BEHIND
-                      }
-      # RIGHT_FRONT
-      elif(obj1.location.y-obj2.location.y >=  -args.border_limit*(obj1.location.x-obj2.location.x) and
-        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and min_y_obj1>max_y_obj2 and min_x_obj1 > max_x_obj2):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":RIGHT_FRONT
-                      }
-      # LEFT_FRONT
-      elif(obj1.location.y-obj2.location.y >= -args.border_limit*(obj1.location.x-obj2.location.x)and
-        obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<min_y_obj2 and min_x_obj1 > max_x_obj2):
-        relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":LEFT_FRONT
-                      }
+        }])
+
+      
        
-                  
-      # Add the relationship to the array of relationships
-      if(relationship is not None):
-        all_relationships.append(relationship)
-        relationship = None
 
       if(obj1_struct["category"] !='Table' and obj2_struct["category"]!='Table' ):
         # NEAR
         if(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) <= args.radius_near_far ):
-          relationship = {"object":obj1_struct["id"],
+          all_relationships.extend([{"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":NEAR
-        }
+        }])
 
         # FAR
         elif(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) > args.radius_near_far ):
-          relationship = {"object":obj1_struct["id"],
+          all_relationships.extend([{"object":obj1_struct["id"],
                         "subject":obj2_struct["id"],
                         "predicate":FAR
-        }
+        }])
 
-        # Add the relationship to the array of relationships
-        if(relationship is not None):
-          all_relationships.append(relationship)
-          relationship = None
+        # BEHIND
+        if(obj1.location.y-obj2.location.y > abs(obj1.location.x-obj2.location.x)*args.border_limit and max_x_obj1<min_x_obj2):
+                all_relationships.extend([{"object":obj1_struct["id"],
+                          "subject":obj2_struct["id"],
+                          "predicate":BEHIND
+                        }])
+        # FRONT OF
+        elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
+          obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_x_obj1 > max_x_obj2):
+          all_relationships.extend( [{"object":obj1_struct["id"],
+                          "subject":obj2_struct["id"],
+                          "predicate":FRONT
+                        }])
+        # LEFT
+        elif(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
+          obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<min_y_obj2):
+          all_relationships.extend([{"object":obj1_struct["id"],
+                          "subject":obj2_struct["id"],
+                          "predicate":LEFT
+                        }])
+        # RIGHT
+        elif(obj1.location.x-obj2.location.x <= (obj1.location.y-obj2.location.y)/args.border_limit and
+          obj1.location.x-obj2.location.x >= -(obj1.location.y-obj2.location.y)/args.border_limit):
+          all_relationships.extend([{"object":obj1_struct["id"],
+                          "subject":obj2_struct["id"],
+                          "predicate":RIGHT
+                        }])
+        # RIGHT_BEHIND
+        elif(obj1.location.y-obj2.location.y >=  (obj1.location.x-obj2.location.x)/args.border_limit and
+          obj1.location.y-obj2.location.y <= args.border_limit*(obj1.location.x-obj2.location.x) 
+          and min_y_obj1>max_y_obj2 and max_x_obj1<min_x_obj2 ):
+          all_relationships.extend([{"object":obj1_struct["id"],
+                          "subject":obj2_struct["id"],
+                          "predicate":RIGHT_BEHIND
+                        }])
+        # LEFT_BEHIND
+        elif(obj1.location.y-obj2.location.y >=  -(obj1.location.x-obj2.location.x)/args.border_limit and
+          obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x)and max_y_obj1<min_y_obj2 and max_x_obj1<min_x_obj2):
+          all_relationships.extend([{"object":obj1_struct["id"],
+                          "subject":obj2_struct["id"],
+                          "predicate":LEFT_BEHIND
+                        }])
+        # RIGHT_FRONT
+        elif(obj1.location.y-obj2.location.y >=  -args.border_limit*(obj1.location.x-obj2.location.x) and
+          obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and min_y_obj1>max_y_obj2 and min_x_obj1 > max_x_obj2):
+          all_relationships.extend([{"object":obj1_struct["id"],
+                          "subject":obj2_struct["id"],
+                          "predicate":RIGHT_FRONT
+                        }])
+        # LEFT_FRONT
+        elif(obj1.location.y-obj2.location.y >= -args.border_limit*(obj1.location.x-obj2.location.x)and
+          obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<min_y_obj2 and min_x_obj1 > max_x_obj2):
+          all_relationships.extend([{"object":obj1_struct["id"],
+                          "subject":obj2_struct["id"],
+                          "predicate":LEFT_FRONT
+                        }])
 
-      # If the objects are not tables
-      if(obj1_struct["category"] !='Table' and obj2_struct["category"]!='Table' ):
-        # INSIDE
-        if(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) <= 0.1
-        and min_x_obj2>min_x_obj1 and max_x_obj2<max_x_obj1):
-          relationship = {"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
-                        "predicate":INSIDE
-        }
-        # Add the relationship to the array of relationships
-        if(relationship is not None):
-          all_relationships.append(relationship)
-          relationship = None
+
+
 
   return all_relationships
 
@@ -751,19 +756,17 @@ def objects_overlap(obj1,obj2):
       print("obj1 and obj2 NOT touching!")
       return False
 
-def add_random_table(args, scene_struct, table_ids):
+def add_random_table(args, scene_struct, table_model_paths):
  
   # Get the path of the objects to add to the scene
-
-  table_id = random.choice(table_ids)
-  obj_path = args.models_dir + "/Table/" +  table_id  + "/models/model_normalized.obj"
+  obj_path = random.choice(table_model_paths)
   
 
   # Import Object 1 in the scene in the center position with random z orientation
   imported_object = bpy.ops.import_scene.obj(filepath=obj_path)
   selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
   obj_object = selected_objects[0] 
-  obj_object.name = "Table" + str(datetime.now())
+  obj_object.name = "Table"
   obj_object.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
   
   # Change table scale
@@ -786,7 +789,6 @@ def add_random_table(args, scene_struct, table_ids):
 
   table_height = max_z_obj
 
-
   ## Override context due to blender 
   for window in bpy.context.window_manager.windows:
     screen = window.screen
@@ -799,14 +801,26 @@ def add_random_table(args, scene_struct, table_ids):
 
   obj_metadata = {
     'id':str(uuid.uuid1()),
-    'shapenet_id': table_id,
     'scene_object_name':obj_object.name,
     'category': "Table",
     '3d_bbox': None, # It has to be calculated later with the camera information
   }
   scene_struct["objects"].append(obj_metadata) 
-  
-  return scene_struct, table_height
+
+  table_points = []
+  all_y = [point[1] for point in bbverts_obj]
+  all_z = [point[2] for point in bbverts_obj]
+ 
+  table_limit_points = list( sorted(zip(all_z, bbverts_obj), reverse=True)[:4])
+#   print(top_points)
+#   all_y = [point[1][1] for point in top_points]
+#   print(all_y)
+#   y_max_index, y_max = max(enumerate(all_y), key=operator.itemgetter(1))
+# top_points[y_max_index]
+#   draw_bounding_box_points(bbverts_obj)
+
+
+  return scene_struct, table_height,table_limit_points
 
 def draw_bounding_box_points(bb_verts):
   for bbvert in bb_verts:
@@ -831,42 +845,201 @@ def draw_bounding_box_points(bb_verts):
 
 
 
-def main(args):
-  scene_struct = {"objects":[], "relationships":[]}
- 
-  with open(args.models_dir + "/models.json", "r") as read_file:
-    models_dict = json.load(read_file)
-    table_ids = models_dict["Table"]
+def check_visibility(scene_struct, min_pixels_per_object):
+  """
+  Check whether all objects in the scene have some minimum number of visible
+  pixels; to accomplish this we assign random (but distinct) colors to all
+  objects, and render using no lighting or shading or antialiasing; this
+  ensures that each object is just a solid uniform color. We can then count
+  the number of pixels of each color in the output image to check the visibility
+  of each object.
+  Returns True if all objects are visible and False otherwise.
+  """
+  f, path = tempfile.mkstemp(suffix='.png')
+  object_colors = render_shadeless(scene_struct, path=path)
+  img = bpy.data.images.load(path)
+  p = list(img.pixels)
+  color_count = Counter((p[i], p[i+1], p[i+2], p[i+3])
+                        for i in range(0, len(p), 4))
+  os.remove(path)
+  print("Number of colors: ", len(color_count))
+  if len(color_count) != len(scene_struct['objects']) + 1:
+    return False
+  print(color_count.most_common())
+  for _, count in color_count.most_common():
+    if count < min_pixels_per_object:
+      return False
+  return True
 
-    # Remove the Tables from the list
-    models_dict.pop('Table', None)
+def render_shadeless(scene_struct, path='flat.png'):
+  """
+  Render a version of the scene with shading disabled and unique materials
+  assigned to all objects, and return a set of all colors that should be in the
+  rendered image. The image itself is written to path. This is used to ensure
+  that all objects will be visible in the final rendered scene.
+  """
+  render_args = bpy.context.scene.render
+
+  # Cache the render args we are about to clobber
+  old_filepath = render_args.filepath
+  old_engine = render_args.engine
+  old_use_antialiasing = render_args.simplify_gpencil_antialiasing
+  old_filter_size = render_args.filter_size
+
+  # Override some render settings to have flat shading
+  render_args.filepath = path
+  render_args.engine = 'BLENDER_EEVEE'
+  render_args.simplify_gpencil_antialiasing = False
+  render_args.filter_size = 0
+
+
+  # Move the lights and ground to layer 2 so they don't render
+  # Create a new collection and link it to the scene.
+  coll2 = bpy.data.collections.new("Collection 2")
+  bpy.context.scene.collection.children.link(coll2)
+  # Link active object to the new collection
+  bpy.data.objects['Lamp_Key'].hide_render= True
+  bpy.data.objects['Lamp_Fill'].hide_render= True
+  bpy.data.objects['Lamp_Back'].hide_render= True
+  #bpy.data.objects['Area'].hide_render= True
+  bpy.data.objects['Plane'].hide_render= True
+  bpy.data.lights['Area.002'].use_shadow = False
+
+
+  # Add random shadeless materials to all objects
+ 
+  object_colors = set()
+  old_materials = []
+  for i, scene_struct_obj in enumerate(scene_struct['objects']):
+    print(scene_struct_obj)
+    obj = bpy.data.objects[scene_struct_obj['scene_object_name']]
+    obj.select_set(True) # 2.8+
+
+    old_materials.append(obj.data.materials[0])
+    for window in bpy.context.window_manager.windows:
+      screen = window.screen
+
+    for area in screen.areas:
+        if area.type == 'VIEW_3D':
+            override = {'window': window, 'screen': screen, 'area': area}
+            bpy.ops.screen.screen_full_area(override)
+            break
+
+    cont = bpy.context.area.type
+
+    print(str(cont))
+    mat = bpy.data.materials.new(name="Material")
+    #mat = bpy.data.materials['Material']
+    mat.name = 'Material_%d' % i
+    while True:
+      r, g, b = [random.random() for _ in range(3)]
+      if (r, g, b) not in object_colors: break
+    object_colors.add((r, g, b))
+    mat.diffuse_color = [r, g, b,1]
+    obj.cycles_visibility.shadow = False
+    mat.shadow_method = 'NONE' # make object shadeless
+    obj.data.materials[0] = mat
+    obj.active_material.shadow_method = 'NONE'
+
+  # Render the scene
+  bpy.ops.render.render(write_still=True)
+
+  # Undo the above; first restore the materials to objects
+  # for mat, scene_struct_obj in zip(old_materials, scene_struct['objects']):
+  #   obj = bpy.data.objects[scene_struct_obj['scene_object_name']]
+  #   obj.data.materials[0] = mat
+
+  # # Move the lights and ground back to layer 0
+  # utils.set_layer(bpy.data.objects['Lamp_Key'], 0)
+  # utils.set_layer(bpy.data.objects['Lamp_Fill'], 0)
+  # utils.set_layer(bpy.data.objects['Lamp_Back'], 0)
+  # utils.set_layer(bpy.data.objects['Ground'], 0)
+
+  # # Set the render settings back to what they were
+  # render_args.filepath = old_filepath
+  # render_args.engine = old_engine
+  # render_args.simplify_gpencil_antialiasing = old_use_antialiasing
+  # render_args.filter_size = old_filter_size
+
+  return object_colors
+
+def main(args):
+  
+  
+  # Delete previous generated images 
+  if(args.delete_previous_images):
+    shutil.rmtree(args.output_image_dir, ignore_errors=True)
+  
+  # Read all 3D models
+
+  models_3d = {}
+
+  categories = []
+  for elem in os.listdir(args.models_dir+ "/"):
+    if os.path.isdir(args.models_dir+ "/" + elem):
+      categories.append(elem)
+      
+  for category in categories:
+    models_3d[category] = []
+    for root, dirs, files in os.walk(args.models_dir + "/" + category + "/"):
+      for file in files:
+          if file.endswith(".obj"):
+              model_path = os.path.join(root, file)
+              models_3d[category].append(model_path)
+
+  table_models_paths = models_3d["Table"]
+
+
+  
+  with open(args.models_dir+ "/"+'config.json') as json_file:
+    config_models = json.load(json_file)
+ 
+  models_type = list(config_models.keys())
+
+
+  # Generate images with mug, bottle and books
+  for i in range(1):
+    
+    # Initialize scene struct
+    scene_struct = {"objects":[], "relationships":[]}
 
     # Load the main blendfile
     bpy.ops.wm.open_mainfile(filepath='data/base_scene.blend')
 
-    scene_struct, table_height = add_random_table(args,scene_struct,table_ids)
-    bottles = models_dict["Bottle"]
-    mugs = models_dict["Mug"]
-      
-    # Read JSON file with models configuration
-    # Define if model can have things inside or not 
-    # Use that information to generate images and relationships
+    # Add random table
+    scene_struct, table_height, table_limit_points = add_random_table(args,scene_struct,table_models_paths)
     
+    model1_key = random.choice(models_type)
+    model2_key = random.choice(models_type)
 
-    # TASKS
+    if (config_models[model1_key]["have_inside"] == False or config_models[model2_key]["be_inside"] == False):
+      possible_relationships = [rel for rel in relationships if rel!=INSIDE and rel !=INSIDE_UP]
+    else:
+      possible_relationships = relationships
 
-    # Generate images with mug, bottle and books
-    scene_struct = add_two_objects(args,scene_struct,["Mug","Bottle"],[mugs[0],bottles[0]],INSIDE,table_height)
-
-
-
-
-    # Organization task, pencils inside cup, books, pencil outside cup
-
-    # Generate images with cubes and stacking cubes
-
-    # Render scene...
+    relationship = random.choice(possible_relationships)
+    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],RIGHT,table_height,table_limit_points)
     render_scene(args,scene_struct,table_height)
+    bpy.ops.wm.quit_blender()
+
+    ### !!!!!! Things to do !!!!!!
+    # Make 3d models good!
+    # Create configuration file for the object type
+    #     - # Read JSON file with models configuration
+    #     - Define if model can have things inside or not 
+    #     - Use that information to generate images and relationships
+    #Put object based of the tables size ?????????
+    #Check if all object are visible in the image if not, generate again or apply zoom out until its visible
+    #############################
+
+  # TASKS
+
+
+  # Organization task, pencils inside cup, books, pencil outside cup
+
+  # Generate images with cubes and stacking cubes
+
+  # Render scene...
 
 
   # # Read file with the 3d models list
@@ -884,6 +1057,8 @@ def main(args):
   #
   # except FileNotFoundError:
   #   print("File \"" + args.models_dir + "/objects.json" +"\" was not found!")
+
+
 
 if __name__ == '__main__':
   if INSIDE_BLENDER:
