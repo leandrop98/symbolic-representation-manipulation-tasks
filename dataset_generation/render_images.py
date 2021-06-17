@@ -348,7 +348,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
   scene_objects.append(obj_object2)
 
-  #bpy.context.view_layer.update() 
+  bpy.context.view_layer.update() 
   
   obj1_dimensions = obj_object1.matrix_world@obj_object1.dimensions 
   obj2_dimensions = obj_object2.matrix_world@obj_object2.dimensions 
@@ -365,74 +365,80 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   obj_object1.location.z += -min_z_obj1 + table_height
   obj_object2.location.z += -min_z_obj2 + table_height
 
-  max_x = max([point[0]for point in table_limit_points])
-  min_x = min([point[0]for point in table_limit_points])
-  max_y = max([point[1]for point in table_limit_points])
-  min_y = min([point[1]for point in table_limit_points])
+  table_max_x = max([point[0]for point in table_limit_points])
+  table_min_x = min([point[0]for point in table_limit_points])
+  table_max_y = max([point[1]for point in table_limit_points])
+  table_min_y = min([point[1]for point in table_limit_points])
 
   bpy.context.view_layer.update() 
   
   bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
+  
   #  Dimensions of objects after rotation
-  obj1_dimension_x = abs(min(bbvert [0] for bbvert in bbverts_obj1)) + abs(max(bbvert [0] for bbvert in bbverts_obj1)) 
-  obj1_dimension_y = abs(min(bbvert [1] for bbvert in bbverts_obj1)) + abs(max(bbvert [1] for bbvert in bbverts_obj1)) 
-  obj2_dimension_x = abs(min(bbvert [0] for bbvert in bbverts_obj2)) + abs(max(bbvert [0] for bbvert in bbverts_obj2)) 
-  obj2_dimension_y = abs(min(bbvert [1] for bbvert in bbverts_obj2)) + abs(max(bbvert [1] for bbvert in bbverts_obj2)) 
+  obj1_dimension_x = abs(max(bbvert [0] for bbvert in bbverts_obj1)-min(bbvert [0] for bbvert in bbverts_obj1))
+  obj1_dimension_y = abs(max(bbvert [1] for bbvert in bbverts_obj1)-min(bbvert [1] for bbvert in bbverts_obj1)) 
+  obj1_dimension_z = abs(max(bbvert [2] for bbvert in bbverts_obj1)-min(bbvert [2] for bbvert in bbverts_obj1))
+  obj2_dimension_x = abs(max(bbvert [0] for bbvert in bbverts_obj2)-min(bbvert [0] for bbvert in bbverts_obj2)) 
+  obj2_dimension_y = abs(max(bbvert [1] for bbvert in bbverts_obj2)-min(bbvert [1] for bbvert in bbverts_obj2))
+  obj2_dimension_z = abs(max(bbvert [2] for bbvert in bbverts_obj2)-min(bbvert [2] for bbvert in bbverts_obj2))
 
   # Apply the relationshiop to the second object
   border_limit = args.border_limit
   inside_table = False
 
+  # Minimal distance between the two objects
+  min_dist_x = (obj1_dimension_x+ obj2_dimension_x)/2 # Minimum distance between two objects in X
+  min_dist_y = (obj1_dimension_y + obj2_dimension_y)/2 # Minimum distance between two objects in Y
+
   # Check these conditions that are wrong
   while(inside_table==False):
     if(relationship==LEFT):
-      y_pos = random.uniform(-((obj1_dimension_y) /2 + (obj2_dimension_y)/2), min_y)
+      y_pos = random.uniform(-min_dist_y, table_min_y)
       x_pos =  random.uniform(y_pos/border_limit, -y_pos/border_limit)
       obj_object2.location.y = y_pos
       obj_object2.location.x = x_pos
     elif(relationship==RIGHT):
-      y_pos = random.uniform(((obj1_dimension_y) /2 + (obj2_dimension_y)/2),max_y)
+      y_pos = random.uniform(min_dist_y,table_max_y)
       x_pos =  random.uniform(-y_pos/border_limit, y_pos/border_limit)
       obj_object2.location.y = y_pos
       obj_object2.location.x = x_pos
     elif(relationship==FRONT):
-      x_pos = random.uniform(((obj1_dimension_y) /2 + (obj2_dimension_y)/2), max_x)
+      x_pos = random.uniform(min_dist_y, table_max_x)
       y_pos = random.uniform(-x_pos/border_limit, x_pos/border_limit)
       obj_object2.location.y = y_pos
       obj_object2.location.x = x_pos
     elif(relationship==BEHIND):
-      x_pos =  random.uniform(-((obj1_dimension_y) /2 + (obj2_dimension_y)/2), min_x)
+      x_pos =  random.uniform(-min_dist_y, table_min_x)
       y_pos =  random.uniform(x_pos/border_limit, -x_pos/border_limit)
       obj_object2.location.y = y_pos
       obj_object2.location.x = x_pos
     elif(relationship==LEFT_BEHIND):
-      y_pos = random.uniform(-((obj1_dimension_y) /2 + (obj2_dimension_y)/2), random.random()*max_y)
-      x_pos =  random.uniform(y_pos*border_limit, y_pos/border_limit)
+      y_pos = random.uniform(-min_dist_y, table_min_y)
+      x_pos = random.uniform(min(y_pos*border_limit,-min_dist_x), y_pos/border_limit)
       obj_object2.location.y = y_pos
       obj_object2.location.x = x_pos
     elif(relationship==RIGHT_BEHIND):
-      y_pos = random.uniform(((obj1_dimension_y) /2 + (obj2_dimension_y)/2), max_y)
-      x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
+      y_pos = random.uniform(min_dist_y, table_max_y)
+      x_pos =  random.uniform(min(-y_pos/border_limit,-min_dist_x), -y_pos*border_limit)
       obj_object2.location.y = y_pos
       obj_object2.location.x = x_pos
     elif(relationship==LEFT_FRONT):
-      y_pos = random.uniform(-((obj1_dimension_y) /2 + (obj2_dimension_y)/2), min_y)
-      x_pos =  random.uniform(-y_pos/border_limit, -y_pos*border_limit)
+      y_pos = random.uniform(-min_dist_y, table_min_y)
+      x_pos =  random.uniform(max(-y_pos/border_limit,min_dist_x), -y_pos*border_limit)
       obj_object2.location.y = y_pos
       obj_object2.location.x = x_pos
     elif(relationship==RIGHT_FRONT):
-      y_pos = random.uniform(((obj1_dimension_y) /2 + (obj2_dimension_y)/2), random.random())
-      x_pos =  random.uniform(y_pos/border_limit, y_pos*border_limit)
+      y_pos = random.uniform(min_dist_y, random.random())
+      x_pos =  random.uniform(max(y_pos/border_limit,min_dist_x), y_pos*border_limit)
       obj_object2.location.y = y_pos
       obj_object2.location.x = x_pos
     elif(relationship==ON):
       x_pos = 0
       y_pos = 0 
-      z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
       #obj_object2.location.y = y_pos
       #obj_object2.location.x = x_pos
-      obj_object2.location.z += z_pos[2]
+      obj_object2.location.z += obj1_dimension_z
     elif(relationship==INSIDE):
       x_pos = 0
       y_pos = 0
@@ -455,9 +461,12 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
     all_y = [point[1] for point in table_limit_points]
 
     bpy.context.view_layer.update() 
-
+    print(table_limit_points)
+    # Position of obj1 relatively to obj2
+    print(obj_object2.location)
+    
     # Check if the 2nd object is inside the table
-    if (obj_object2.location.x<=max_x and obj_object2.location.x>=min_x and obj_object2.location.y<=max_y and obj_object2.location.y>min_y):
+    if (obj_object2.location.x<=table_max_x and obj_object2.location.x>=table_min_x and obj_object2.location.y<=table_max_y and obj_object2.location.y>table_min_y):
       inside_table = True
 
 
@@ -480,6 +489,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
     'category': objects_category[0],
     '3d_bbox': None, # It has to be calculated later with the camera information
   }
+
   obj2_metadata = {
     'id':str(uuid.uuid1()),
     'scene_object_name':obj_object2.name,
@@ -535,12 +545,7 @@ def compute_all_relationships(args,scene_struct):
       min_y_obj2 =  min([vec[1] for vec in obj2_bbox])
       max_y_obj1 = max([vec[1] for vec in obj1_bbox])
       max_y_obj2 =  max([vec[1] for vec in obj2_bbox])
-      # Position of obj1 relatively to obj2
-      print(obj1_struct['category'] + ": " + str(obj1.location))
-      print(obj2_struct['category'] + ": " +  str(obj2.location))
-      print(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit)
-      print(obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit)
-    
+     
 
       # INSIDE
       if(min_y_obj1>min_y_obj2 and max_y_obj1<max_y_obj2 and min_x_obj1>min_x_obj2 and max_x_obj1<max_x_obj2 
@@ -588,64 +593,60 @@ def compute_all_relationships(args,scene_struct):
         }])
 
         # BEHIND
-        if(obj1.location.y-obj2.location.y > abs(obj1.location.x-obj2.location.x)*args.border_limit and max_x_obj1<min_x_obj2):
+        if(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
+          obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_x_obj1<=min_x_obj2):
                 all_relationships.extend([{"object":obj1_struct["id"],
                           "subject":obj2_struct["id"],
                           "predicate":BEHIND
                         }])
         # FRONT OF
         elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
-          obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_x_obj1 > max_x_obj2):
+          obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_x_obj1 >= max_x_obj2):
           all_relationships.extend( [{"object":obj1_struct["id"],
                           "subject":obj2_struct["id"],
                           "predicate":FRONT
                         }])
         # LEFT
-        elif(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
-          obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<min_y_obj2):
+        elif(obj1.location.y-obj2.location.y <= -abs(obj1.location.x-obj2.location.x)*args.border_limit and max_y_obj1<=min_y_obj2):
           all_relationships.extend([{"object":obj1_struct["id"],
                           "subject":obj2_struct["id"],
                           "predicate":LEFT
                         }])
         # RIGHT
-        elif(obj1.location.x-obj2.location.x <= (obj1.location.y-obj2.location.y)/args.border_limit and
-          obj1.location.x-obj2.location.x >= -(obj1.location.y-obj2.location.y)/args.border_limit):
+        elif(obj1.location.y-obj2.location.y >= abs(obj1.location.x-obj2.location.x)*args.border_limit and min_y_obj1>=max_y_obj2):
           all_relationships.extend([{"object":obj1_struct["id"],
                           "subject":obj2_struct["id"],
                           "predicate":RIGHT
                         }])
         # RIGHT_BEHIND
-        elif(obj1.location.y-obj2.location.y >=  (obj1.location.x-obj2.location.x)/args.border_limit and
-          obj1.location.y-obj2.location.y <= args.border_limit*(obj1.location.x-obj2.location.x) 
-          and min_y_obj1>max_y_obj2 and max_x_obj1<min_x_obj2 ):
+        elif(obj1.location.y-obj2.location.y >=  -(obj1.location.x-obj2.location.x)/args.border_limit and
+          obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x) 
+          and min_y_obj1>=max_y_obj2 and max_x_obj1<=min_x_obj2 ):
           all_relationships.extend([{"object":obj1_struct["id"],
                           "subject":obj2_struct["id"],
                           "predicate":RIGHT_BEHIND
                         }])
         # LEFT_BEHIND
-        elif(obj1.location.y-obj2.location.y >=  -(obj1.location.x-obj2.location.x)/args.border_limit and
-          obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x)and max_y_obj1<min_y_obj2 and max_x_obj1<min_x_obj2):
+        elif(obj1.location.y-obj2.location.y >= args.border_limit*(obj1.location.x-obj2.location.x) and
+          obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<=min_y_obj2 and max_x_obj1<=min_x_obj2):
           all_relationships.extend([{"object":obj1_struct["id"],
                           "subject":obj2_struct["id"],
                           "predicate":LEFT_BEHIND
                         }])
         # RIGHT_FRONT
-        elif(obj1.location.y-obj2.location.y >=  -args.border_limit*(obj1.location.x-obj2.location.x) and
-          obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and min_y_obj1>max_y_obj2 and min_x_obj1 > max_x_obj2):
+        elif(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
+          obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)*args.border_limit and min_y_obj1>=max_y_obj2 and min_x_obj1 >= max_x_obj2):
           all_relationships.extend([{"object":obj1_struct["id"],
                           "subject":obj2_struct["id"],
                           "predicate":RIGHT_FRONT
                         }])
         # LEFT_FRONT
         elif(obj1.location.y-obj2.location.y >= -args.border_limit*(obj1.location.x-obj2.location.x)and
-          obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<min_y_obj2 and min_x_obj1 > max_x_obj2):
+          obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<=min_y_obj2 and min_x_obj1 >= max_x_obj2):
           all_relationships.extend([{"object":obj1_struct["id"],
                           "subject":obj2_struct["id"],
                           "predicate":LEFT_FRONT
                         }])
-
-
-
 
   return all_relationships
 
@@ -833,7 +834,6 @@ def render_shadeless(scene_struct, path='flat.png'):
   object_colors = set()
   old_materials = []
   for i, scene_struct_obj in enumerate(scene_struct['objects']):
-    print(scene_struct_obj)
     obj = bpy.data.objects[scene_struct_obj['scene_object_name']]
     obj.select_set(True) # 2.8+
 
@@ -849,7 +849,6 @@ def render_shadeless(scene_struct, path='flat.png'):
 
     cont = bpy.context.area.type
 
-    print(str(cont))
     mat = bpy.data.materials.new(name="Material")
     #mat = bpy.data.materials['Material']
     mat.name = 'Material_%d' % i
@@ -920,7 +919,7 @@ def main(args):
 
 
   # Generate images with mug, bottle and books
-  for i in range(10):
+  for i in range(30):
     
     # Initialize scene struct
     scene_struct = {"objects":[], "relationships":[]}
@@ -940,7 +939,7 @@ def main(args):
       possible_relationships = relationships
 
     relationship = random.choice(possible_relationships)
-    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],RIGHT,table_height,table_limit_points)
+    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],ON,table_height,table_limit_points)
     render_scene(args,scene_struct,table_height)
   #bpy.ops.wm.quit_blender()
 
