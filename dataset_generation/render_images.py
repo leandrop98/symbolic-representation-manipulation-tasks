@@ -13,6 +13,7 @@ import uuid
 import shutil
 import operator
 
+# Relationships
 LEFT = "left"
 RIGHT = "right"
 ON = "on"
@@ -30,8 +31,11 @@ OUTSIDE = "outside"
 INSIDE_UP = "inside_up"
 
 relationships = [LEFT,RIGHT,UNDER,ON,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT,INSIDE,INSIDE_UP]
-relationships = [LEFT,RIGHT,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT]
 
+# Object Position States
+UPRIGHT = 'upright'
+UPSIDE_DOWN = 'upside_down'
+LAYING = 'laying'
 
 ## SHAPE NET Test Query
 """ query = "kitchen"
@@ -285,11 +289,6 @@ def render_scene(args,scene_struct,table_height,
   
   bpy.context.view_layer.update() 
 
-
-
-  # Check if objects are visible in the picture?
-  #check_visibility(scene_struct,100)
-
   
   # Get bounding boxes of all objects
   for obj_struct in scene_struct['objects']:
@@ -305,6 +304,10 @@ def render_scene(args,scene_struct,table_height,
   scene_struct['image_filename'] =  os.path.basename(output_image_id+".png")
   scene_struct['relationships'] = compute_all_relationships(args,scene_struct)
 
+   # Check if objects are visible in the picture?
+  if check_visibility(args, scene_struct,100) is False:
+    return False
+
   # Render scene
   while True:
     try:
@@ -319,7 +322,8 @@ def render_scene(args,scene_struct,table_height,
 
   if output_blendfile is not None:
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
-
+  
+  return True
 def add_two_objects(args,scene_struct, objects_category, objects_path, relationship,table_height,table_limit_points):
   
   """
@@ -351,9 +355,8 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   bpy.context.view_layer.update() 
   
   obj1_dimensions = obj_object1.matrix_world@obj_object1.dimensions 
-  obj2_dimensions = obj_object2.matrix_world@obj_object2.dimensions 
-
-
+  obj2_dimensions = obj_object2.matrix_world@obj_object2.dimensions
+  
 
   bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
@@ -390,6 +393,11 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   # Minimal distance between the two objects
   min_dist_x = (obj1_dimension_x+ obj2_dimension_x)/2 # Minimum distance between two objects in X
   min_dist_y = (obj1_dimension_y + obj2_dimension_y)/2 # Minimum distance between two objects in Y
+
+  # Set position states for the objects
+  obj1_state = UPRIGHT
+  obj2_state = UPSIDE_DOWN
+
 
   # Check these conditions that are wrong
   while(inside_table==False):
@@ -439,6 +447,12 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
       #obj_object2.location.y = y_pos
       #obj_object2.location.x = x_pos
       obj_object2.location.z += obj1_dimension_z
+    elif(relationship==UNDER):
+      x_pos = 0
+      y_pos = 0 
+      #obj_object2.location.y = y_pos
+      #obj_object2.location.x = x_pos
+      obj_object1.location.z += obj2_dimension_z
     elif(relationship==INSIDE):
       x_pos = 0
       y_pos = 0
@@ -456,6 +470,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
       bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
       max_z_obj2 = max([vec[2] for vec in bbverts_obj2])
       obj_object2.location.z = max_z_obj1-(max_z_obj2 - obj_object2.location.z)+0.1
+      obj2_state = UPSIDE_DOWN
     
     all_x = [point[0] for point in table_limit_points]
     all_y = [point[1] for point in table_limit_points]
@@ -470,8 +485,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
       inside_table = True
 
 
-  bpy.context.view_layer.update() 
-
+  bpy.context.view_layer.update()
 
   ## Override context due to blender 
   for window in bpy.context.window_manager.windows:
@@ -487,6 +501,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
     'id':str(uuid.uuid1()),
     'scene_object_name':obj_object1.name,
     'category': objects_category[0],
+    'state':obj1_state,
     '3d_bbox': None, # It has to be calculated later with the camera information
   }
 
@@ -494,6 +509,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
     'id':str(uuid.uuid1()),
     'scene_object_name':obj_object2.name,
     'category': objects_category[1],
+    'state':obj2_state,
     '3d_bbox': None, # It has to be calculated later with the camera information
   }
   scene_struct['objects'].extend([obj1_metadata,obj2_metadata])
@@ -698,7 +714,7 @@ def add_random_table(args, scene_struct, table_model_paths):
   obj_object.scale.z=10
   bpy.context.view_layer.update() 
 
-  # Change z location to put table in the floodr
+  # Change z location to put table in the floor
   
   bbverts_obj = [obj_object.matrix_world@Vector(bbvert) for bbvert in obj_object.bound_box]
   min_z_obj = min([vec[2] for vec in bbverts_obj])
@@ -735,12 +751,6 @@ def add_random_table(args, scene_struct, table_model_paths):
   all_z = [point[2] for point in bbverts_obj]
  
   table_limit_points = [point[1] for point in list( sorted(zip(all_z, bbverts_obj), reverse=True)[:4])]
-#   print(top_points)
-#   all_y = [point[1][1] for point in top_points]
-#   print(all_y)
-#   y_max_index, y_max = max(enumerate(all_y), key=operator.itemgetter(1))
-# top_points[y_max_index]
-#   draw_bounding_box_points(bbverts_obj)
 
 
   return scene_struct, table_height,table_limit_points
@@ -768,121 +778,38 @@ def draw_bounding_box_points(bb_verts):
 
 
 
-def check_visibility(scene_struct, min_pixels_per_object):
+def check_visibility(args, scene_struct, min_visible_percentage_per_object):
   """
   Check whether all objects in the scene have some minimum number of visible
-  pixels; to accomplish this we assign random (but distinct) colors to all
-  objects, and render using no lighting or shading or antialiasing; this
-  ensures that each object is just a solid uniform color. We can then count
-  the number of pixels of each color in the output image to check the visibility
-  of each object.
+  pixels; to accomplish this we verify if all the vertices of the
+  object bounding box are inside of the rendered image or not
   Returns True if all objects are visible and False otherwise.
   """
-  f, path = tempfile.mkstemp(suffix='.png')
-  object_colors = render_shadeless(scene_struct, path=path)
-  img = bpy.data.images.load(path)
-  p = list(img.pixels)
-  color_count = Counter((p[i], p[i+1], p[i+2], p[i+3])
-                        for i in range(0, len(p), 4))
-  os.remove(path)
-  print("Number of colors: ", len(color_count))
-  if len(color_count) != len(scene_struct['objects']) + 1:
-    return False
-  print(color_count.most_common())
-  for _, count in color_count.most_common():
-    if count < min_pixels_per_object:
+  width = args.width
+  height = args.height
+  for obj in scene_struct["objects"]:
+
+    if obj['category'] is "Table":
+      continue
+    obj_bbox = obj['2d_bbox']
+    object_area = abs(obj_bbox[0][0]- obj_bbox[1][0]) * abs(obj_bbox[0][1]- obj_bbox[1][1])
+    l_obj =  obj_bbox[0]
+    r_obj = obj_bbox[1]    
+    l_img = (0,height)
+    r_img = (width,0)
+    x_dist = min(r_obj[0], r_img[0])- max(l_obj[0], l_img[0])
+    y_dist = min(l_obj[1], l_img[1])-max(r_obj[1], r_img[1])
+    
+    if( x_dist > 0 and y_dist > 0 ):
+      inters_area = x_dist * y_dist
+    else:
+      inters_area = 0
+    percentage_visible = (inters_area/object_area)*100
+    print(obj['category'] +" is "+ str(percentage_visible) + "%% in the image")
+    if (percentage_visible<min_visible_percentage_per_object):
+      print("Objects are not visible!")
       return False
   return True
-
-def render_shadeless(scene_struct, path='flat.png'):
-  """
-  Render a version of the scene with shading disabled and unique materials
-  assigned to all objects, and return a set of all colors that should be in the
-  rendered image. The image itself is written to path. This is used to ensure
-  that all objects will be visible in the final rendered scene.
-  """
-  render_args = bpy.context.scene.render
-
-  # Cache the render args we are about to clobber
-  old_filepath = render_args.filepath
-  old_engine = render_args.engine
-  old_use_antialiasing = render_args.simplify_gpencil_antialiasing
-  old_filter_size = render_args.filter_size
-
-  # Override some render settings to have flat shading
-  render_args.filepath = path
-  render_args.engine = 'BLENDER_EEVEE'
-  render_args.simplify_gpencil_antialiasing = False
-  render_args.filter_size = 0
-
-
-  # Move the lights and ground to layer 2 so they don't render
-  # Create a new collection and link it to the scene.
-  coll2 = bpy.data.collections.new("Collection 2")
-  bpy.context.scene.collection.children.link(coll2)
-  # Link active object to the new collection
-  bpy.data.objects['Lamp_Key'].hide_render= True
-  bpy.data.objects['Lamp_Fill'].hide_render= True
-  bpy.data.objects['Lamp_Back'].hide_render= True
-  #bpy.data.objects['Area'].hide_render= True
-  bpy.data.objects['Plane'].hide_render= True
-  bpy.data.lights['Area.002'].use_shadow = False
-
-
-  # Add random shadeless materials to all objects
- 
-  object_colors = set()
-  old_materials = []
-  for i, scene_struct_obj in enumerate(scene_struct['objects']):
-    obj = bpy.data.objects[scene_struct_obj['scene_object_name']]
-    obj.select_set(True) # 2.8+
-
-    old_materials.append(obj.data.materials[0])
-    for window in bpy.context.window_manager.windows:
-      screen = window.screen
-
-    for area in screen.areas:
-        if area.type == 'VIEW_3D':
-            override = {'window': window, 'screen': screen, 'area': area}
-            bpy.ops.screen.screen_full_area(override)
-            break
-
-    cont = bpy.context.area.type
-
-    mat = bpy.data.materials.new(name="Material")
-    #mat = bpy.data.materials['Material']
-    mat.name = 'Material_%d' % i
-    while True:
-      r, g, b = [random.random() for _ in range(3)]
-      if (r, g, b) not in object_colors: break
-    object_colors.add((r, g, b))
-    mat.diffuse_color = [r, g, b,1]
-    obj.cycles_visibility.shadow = False
-    mat.shadow_method = 'NONE' # make object shadeless
-    obj.data.materials[0] = mat
-    obj.active_material.shadow_method = 'NONE'
-
-  # Render the scene
-  bpy.ops.render.render(write_still=True)
-
-  # Undo the above; first restore the materials to objects
-  # for mat, scene_struct_obj in zip(old_materials, scene_struct['objects']):
-  #   obj = bpy.data.objects[scene_struct_obj['scene_object_name']]
-  #   obj.data.materials[0] = mat
-
-  # # Move the lights and ground back to layer 0
-  # utils.set_layer(bpy.data.objects['Lamp_Key'], 0)
-  # utils.set_layer(bpy.data.objects['Lamp_Fill'], 0)
-  # utils.set_layer(bpy.data.objects['Lamp_Back'], 0)
-  # utils.set_layer(bpy.data.objects['Ground'], 0)
-
-  # # Set the render settings back to what they were
-  # render_args.filepath = old_filepath
-  # render_args.engine = old_engine
-  # render_args.simplify_gpencil_antialiasing = old_use_antialiasing
-  # render_args.filter_size = old_filter_size
-
-  return object_colors
 
 def main(args):
   
@@ -911,15 +838,16 @@ def main(args):
   table_models_paths = models_3d["Table"]
 
 
-  
+  # Read configuration file
   with open(args.models_dir+ "/"+'config.json') as json_file:
     config_models = json.load(json_file)
  
   models_type = list(config_models.keys())
 
+  num_imgs_render = 10
 
   # Generate images with mug, bottle and books
-  for i in range(30):
+  while(num_imgs_render>0):
     
     # Initialize scene struct
     scene_struct = {"objects":[], "relationships":[]}
@@ -933,23 +861,31 @@ def main(args):
     model1_key = random.choice(models_type)
     model2_key = random.choice(models_type)
 
+    # Apply the configuration file to the objects
+    possible_relationships = relationships
     if (config_models[model1_key]["have_inside"] == False or config_models[model2_key]["be_inside"] == False):
-      possible_relationships = [rel for rel in relationships if rel!=INSIDE and rel !=INSIDE_UP]
-    else:
-      possible_relationships = relationships
+      possible_relationships = [rel for rel in possible_relationships if rel!=INSIDE and rel !=INSIDE_UP]
 
+    if(model2_key!='Mug'): # If is not a mug remove INSIDE_UP
+      possible_relationships = [rel for rel in possible_relationships if rel !=INSIDE_UP]
+
+    if(not (model1_key=='Book' and model2_key=='Mug')): # Relationship ON only for book ON mug
+      possible_relationships = [rel for rel in possible_relationships if rel!=ON]
+
+    # Choose random relationship
     relationship = random.choice(possible_relationships)
-    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],ON,table_height,table_limit_points)
-    render_scene(args,scene_struct,table_height)
-  #bpy.ops.wm.quit_blender()
+    
+    # Add two objects to the table with the relationship chosen
+    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],FRONT,table_height,table_limit_points)
+    scene_struct['attempt_relationship']=relationship
+    if render_scene(args,scene_struct,table_height):
+      num_imgs_render -= 1 # if the image is rendered subtract
+
+  bpy.ops.wm.quit_blender()
 
     ### !!!!!! Things to do !!!!!!
     # Make 3d models good!
     # Create configuration file for the object type
-    #     - # Read JSON file with models configuration
-    #     - Define if model can have things inside or not 
-    #     - Use that information to generate images and relationships
-    #Put object based of the tables size ?????????
     #Check if all object are visible in the image if not, generate again or apply zoom out until its visible
     #############################
 
