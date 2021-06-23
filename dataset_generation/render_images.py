@@ -30,7 +30,7 @@ INSIDE = "inside"
 OUTSIDE = "outside"
 INSIDE_UP = "inside_up"
 
-relationships = [LEFT,RIGHT,UNDER,ON,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT,INSIDE,INSIDE_UP]
+relationships = [LEFT,RIGHT,ON,FRONT,BEHIND,LEFT_BEHIND,RIGHT_BEHIND,LEFT_FRONT,RIGHT_FRONT,INSIDE,INSIDE_UP]
 
 # Object Position States
 UPRIGHT = 'upright'
@@ -324,6 +324,7 @@ def render_scene(args,scene_struct,table_height,
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
   
   return True
+
 def add_two_objects(args,scene_struct, objects_category, objects_path, relationship,table_height,table_limit_points):
   
   """
@@ -354,9 +355,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
 
   bpy.context.view_layer.update() 
   
-  obj1_dimensions = obj_object1.matrix_world@obj_object1.dimensions 
-  obj2_dimensions = obj_object2.matrix_world@obj_object2.dimensions
-  
+
 
   bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
@@ -368,16 +367,20 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   obj_object1.location.z += -min_z_obj1 + table_height
   obj_object2.location.z += -min_z_obj2 + table_height
 
-  table_max_x = max([point[0]for point in table_limit_points])
-  table_min_x = min([point[0]for point in table_limit_points])
-  table_max_y = max([point[1]for point in table_limit_points])
-  table_min_y = min([point[1]for point in table_limit_points])
-
   bpy.context.view_layer.update() 
   
   bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
   
+
+  # Get table limits with the object size so the object doesn't stay ouside of the table
+  table_max_x = max([point[0]for point in table_limit_points]) - obj_object2.dimensions.x/2
+  table_min_x = min([point[0]for point in table_limit_points]) + obj_object2.dimensions.x/2
+  table_max_y = max([point[1]for point in table_limit_points]) - obj_object2.dimensions.y/2
+  table_min_y = min([point[1]for point in table_limit_points]) + obj_object2.dimensions.y/2
+
+
+
   #  Dimensions of objects after rotation
   obj1_dimension_x = abs(max(bbvert [0] for bbvert in bbverts_obj1)-min(bbvert [0] for bbvert in bbverts_obj1))
   obj1_dimension_y = abs(max(bbvert [1] for bbvert in bbverts_obj1)-min(bbvert [1] for bbvert in bbverts_obj1)) 
@@ -386,7 +389,6 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   obj2_dimension_y = abs(max(bbvert [1] for bbvert in bbverts_obj2)-min(bbvert [1] for bbvert in bbverts_obj2))
   obj2_dimension_z = abs(max(bbvert [2] for bbvert in bbverts_obj2)-min(bbvert [2] for bbvert in bbverts_obj2))
 
-  # Apply the relationshiop to the second object
   border_limit = args.border_limit
   inside_table = False
 
@@ -396,10 +398,10 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
 
   # Set position states for the objects
   obj1_state = UPRIGHT
-  obj2_state = UPSIDE_DOWN
+  obj2_state = UPRIGHT
 
 
-  # Check these conditions that are wrong
+  # Apply the relationshiop to the second object
   while(inside_table==False):
     if(relationship==LEFT):
       y_pos = random.uniform(-min_dist_y, table_min_y)
@@ -469,7 +471,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
       max_z_obj1 = max([vec[2] for vec in bbverts_obj1])
       bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
       max_z_obj2 = max([vec[2] for vec in bbverts_obj2])
-      obj_object2.location.z = max_z_obj1-(max_z_obj2 - obj_object2.location.z)+0.1
+      obj_object2.location.z = max_z_obj1-(max_z_obj2 - obj_object2.location.z)+0.05
       obj2_state = UPSIDE_DOWN
     
     all_x = [point[0] for point in table_limit_points]
@@ -528,14 +530,8 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
 
   return None, None
 
-
 def compute_all_relationships(args,scene_struct):
-  """ Computes relationships between all pairs of objects in the scene.
-  
-  Returns a dictionary mapping string relationship names to lists of lists of
-  integers, where output[rel][i] gives a list of object indices that have the
-  relationship rel with object i. For example if j is in output['left'][i] then
-  object j is left of object i. """
+  """ Computes relationships between all pairs of objects in the scene."""
   bpy.context.view_layer.update() 
   all_relationships = []
   for obj1_struct in scene_struct['objects']:
@@ -743,6 +739,7 @@ def add_random_table(args, scene_struct, table_model_paths):
     'scene_object_name':obj_object.name,
     'category': "Table",
     '3d_bbox': None, # It has to be calculated later with the camera information
+    'model_path':obj_path
   }
   scene_struct["objects"].append(obj_metadata) 
 
@@ -813,7 +810,6 @@ def check_visibility(args, scene_struct, min_visible_percentage_per_object):
 
 def main(args):
   
-  
   # Delete previous generated images 
   if(args.delete_previous_images):
     shutil.rmtree(args.output_image_dir, ignore_errors=True)
@@ -844,8 +840,7 @@ def main(args):
  
   models_type = list(config_models.keys())
 
-  num_imgs_render = 10
-
+  num_imgs_render = 50
   # Generate images with mug, bottle and books
   while(num_imgs_render>0):
     
@@ -858,25 +853,40 @@ def main(args):
     # Add random table
     scene_struct, table_height, table_limit_points = add_random_table(args,scene_struct,table_models_paths)
     
-    model1_key = random.choice(models_type)
-    model2_key = random.choice(models_type)
-
-    # Apply the configuration file to the objects
-    possible_relationships = relationships
-    if (config_models[model1_key]["have_inside"] == False or config_models[model2_key]["be_inside"] == False):
-      possible_relationships = [rel for rel in possible_relationships if rel!=INSIDE and rel !=INSIDE_UP]
-
-    if(model2_key!='Mug'): # If is not a mug remove INSIDE_UP
-      possible_relationships = [rel for rel in possible_relationships if rel !=INSIDE_UP]
-
-    if(not (model1_key=='Book' and model2_key=='Mug')): # Relationship ON only for book ON mug
-      possible_relationships = [rel for rel in possible_relationships if rel!=ON]
-
-    # Choose random relationship
-    relationship = random.choice(possible_relationships)
+    # Choose random relation for the objects
+    relationship = random.choice(relationships)
     
+    # Apply restrictions to relationships with some objects
+    models_1_type = models_type
+    models_2_type = models_type
+
+    # testing
+    relationship = INSIDE_UP
+
+    if (relationship is ON):
+      models_1_type = [model for model in models_type if model!='Bottle'] # Base can be everything except bottle
+    
+    if (relationship is INSIDE_UP):
+      models_1_type = [model for model in models_type if model=='Bottle']
+      models_2_type = [model for model in models_type if model=='Mug']
+    
+    if (relationship is INSIDE):# we can only have bottle inside mug
+      models_1_type =  [model for model in models_type if model=='Mug']
+      models_2_type = [model for model in models_type if model=='Bottle']
+
+    # Select 1st model
+    model1_key = random.choice(models_1_type)
+
+    # Restriction based on the first model selectes    
+    if (model1_key=='Mug' and relationship is ON):
+      models_2_type = [model for model in models_type if model!='Bottle'] # if base is mug can't have bottle ON
+    
+    # Select 2nd model
+    model2_key = random.choice(models_2_type)
+
+
     # Add two objects to the table with the relationship chosen
-    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],FRONT,table_height,table_limit_points)
+    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],relationship,table_height,table_limit_points)
     scene_struct['attempt_relationship']=relationship
     if render_scene(args,scene_struct,table_height):
       num_imgs_render -= 1 # if the image is rendered subtract
@@ -884,9 +894,8 @@ def main(args):
   bpy.ops.wm.quit_blender()
 
     ### !!!!!! Things to do !!!!!!
-    # Make 3d models good!
     # Create configuration file for the object type
-    #Check if all object are visible in the image if not, generate again or apply zoom out until its visible
+    # Check if all object are visible in the image if not, generate again or apply zoom out until its visible
     #############################
 
   # TASKS

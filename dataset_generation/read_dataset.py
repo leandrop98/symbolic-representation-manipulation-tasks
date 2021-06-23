@@ -43,7 +43,7 @@ def display_images(bbox2d,bbox3d):
                     cv.rectangle(img,obj['2d_bbox'][0],obj['2d_bbox'][1],(0,0,250),2)
                     cv.putText(img,obj['category'],(obj['2d_bbox'][0][0], obj['2d_bbox'][0][1]+20), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color= (0,0,255),thickness=1)
 
-            # Resize the image to add some text
+            # Resize the image to add the relationships text
             blank_image = np.zeros((height,width+300,3), np.uint8)
             blank_image[:,:] = (255,255,255)
             l_img = blank_image.copy()                    # (600, 900, 3)
@@ -61,7 +61,13 @@ def display_images(bbox2d,bbox3d):
                         object = obj["category"]
                 cv.putText(img,object + "-" + relationship["predicate"]+"-" + subject, (width + 10,text_position), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color = (0,0,0),lineType=1)
                 text_position += 15
-        
+            
+            text_position += 15
+            for obj in data['objects']:
+                if 'state' in obj:
+                    cv.putText(img,obj['category'] + " is " + obj["state"], (width + 10,text_position), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color = (0,0,0),lineType=1)
+                    text_position += 15
+
             cv.putText(img,  data["image_filename"], (10,10), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.3,color = (0,0,0),lineType=1)
 
 
