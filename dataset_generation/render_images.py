@@ -1117,6 +1117,9 @@ def main(args):
     # Add random table
     scene_struct, table_height, table_limit_points = add_random_table(args,scene_struct,table_models_paths)
     
+    # Randomly choose 2 or 3 objects in the image
+    num_objects = random.choice([2,3])
+
     # Choose random relation for the objects
     relationship = random.choice(relationships)
     relationship = INSIDE_UP
@@ -1127,15 +1130,15 @@ def main(args):
     # Add two objects to the table with the relationship chosen
     scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],relationship,table_height,table_limit_points)
     
-    # Add an object with the reference in an existing object
+    if num_objects == 3:
+      # Add an object with the reference in an existing object
 
-    # Choose another random relation for the objects
-    relationship = random.choice(relationships)
-    model2_key = select_model(model1_key,models_type,relationship)
-    while(model2_key is False ):
-      print("i am stuck!")
+      # Choose another random relation for the objects
       relationship = random.choice(relationships)
       model2_key = select_model(model1_key,models_type,relationship)
+      while(model2_key is False ):
+        relationship = random.choice(relationships)
+        model2_key = select_model(model1_key,models_type,relationship)
 
 
 
