@@ -520,7 +520,11 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
     '3d_bbox': None, # It has to be calculated later with the camera information
   }
   scene_struct['objects'].extend([obj1_metadata,obj2_metadata])
-
+  # Keep track of the desired relationships
+  scene_struct['desired_relationships'].append({"object":obj1_metadata["id"],
+                          "subject":obj2_metadata["id"],
+                          "predicate":relationship
+                        })
   return scene_struct
 
 def add_object_with_relationship(args,scene_struct,reference_object ,object_category, object_path, relationship,table_height,table_limit_points):
@@ -535,7 +539,7 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
   scene_objects = []
 
   # Object 1 is the reference object
-  obj_object1 = reference_object
+  obj_object1 = bpy.context.scene.objects[reference_object['scene_object_name']]
 
   # Import Object 2 in the scene in the center position with random z orientation
   imported_object = bpy.ops.import_scene.obj(filepath=obj2_path)
@@ -693,7 +697,11 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
     '3d_bbox': None, # It has to be calculated later with the camera information
   }
   scene_struct['objects'].extend([obj2_metadata])
-
+  # Keep track of the desired relationships
+  scene_struct['desired_relationships'].append({"object":reference_object["id"],
+                          "subject":obj2_metadata["id"],
+                          "predicate":relationship
+                        })
   return scene_struct
 
 
@@ -830,9 +838,9 @@ def compute_all_relationships(args,scene_struct):
 
   return all_relationships
 
-def objects_overlap(scene_struct,percentage):
+def objects_overlap(scene_struct,max_percentage):
   """ Calculates the percentange of object intersecting other objects
-  Returns true if the therea object intersectin more than the percentage defined.
+  Returns true if there are objects intersecting more than the percentage defined.
   Return false if the objects intersect less than the percentage defined"""
   scene_objects = []
   for obj in scene_struct['objects']:
@@ -842,6 +850,9 @@ def objects_overlap(scene_struct,percentage):
     for obj2 in scene_objects:
       if obj1 == obj2:
         continue
+      obj1_struct = [obj for obj in scene_struct['objects'] if obj['scene_object_name'] ==  obj1.name][0]
+      obj2_struct = [obj for obj in scene_struct['objects'] if obj['scene_object_name'] ==  obj2.name][0]
+
       obj1_bbox = [obj1.matrix_world@Vector(bbvert) for bbvert in obj1.bound_box]
       obj2_bbox = [obj2.matrix_world@Vector(bbvert) for bbvert in obj2.bound_box]
       left_bottom1 = (max([p[0] for p in obj1_bbox]),min([p[1] for p in obj1_bbox]),min([p[2] for p in obj1_bbox]))
@@ -849,14 +860,13 @@ def objects_overlap(scene_struct,percentage):
 
       left_bottom2 = (max([p[0] for p in obj2_bbox]),min([p[1] for p in obj2_bbox]),min([p[2] for p in obj2_bbox]))
       top_right2 = (min([p[0] for p in obj2_bbox]),max([p[1] for p in obj2_bbox]),max([p[2] for p in obj2_bbox]))
+      
+      # If the objects are supposed to be inside each other the percentage is 50%
+      for rel in scene_struct['desired_relationships']:
+        if (rel['object'] == obj1_struct['id'] and rel['subject']==obj2_struct['id'] 
+        and (rel['predicate'] == INSIDE_UP or rel['predicate'] == INSIDE)):
+          max_percentage = 50
 
-
-      #draw_bounding_box_points([left_bottom1,top_right1,left_bottom2,top_right2])
-      #object_area = abs(obj_bbox[0][0]- obj_bbox[1][0]) * abs(obj_bbox[0][1]- obj_bbox[1][1])
-      # l_obj1 =  obj1_bbox[0]
-      # r_obj1 = obj1_bbox[1]    
-      # l_img = (0,height)
-      # r_img = (width,0)
       x_dist = min(left_bottom1[0], left_bottom1[0])- max(top_right1[0], top_right1[0])
       y_dist =min(top_right1[1], top_right2[1])- max(left_bottom1[1], left_bottom2[1])
       z_dist = min(top_right1[2], top_right2[2])-max(left_bottom1[2], left_bottom2[2])
@@ -875,7 +885,11 @@ def objects_overlap(scene_struct,percentage):
         print(obj1.name + " doesn't intersect " + obj2.name)
       else:
         print(str(percentage) + "%  : "+ obj1.name + "intersect " + obj2.name)
-
+      if percentage > max_percentage:
+        return True
+      
+      return False
+      
       # percentage_visible = (inters_area/object_area)*100
       # print(obj['category'] +" is "+ str(percentage_visible) + "%% in the image")
       # if (percentage_visible<min_visible_percentage_per_object):
@@ -1095,7 +1109,7 @@ def main(args):
   while(num_imgs_render>0):
     
     # Initialize scene struct
-    scene_struct = {"objects":[], "relationships":[]}
+    scene_struct = {"objects":[], "relationships":[],'desired_relationships':[]}
 
     # Load the main blendfile
     bpy.ops.wm.open_mainfile(filepath='data/base_scene.blend')
@@ -1123,8 +1137,10 @@ def main(args):
       relationship = random.choice(relationships)
       model2_key = select_model(model1_key,models_type,relationship)
 
+
+
     # Add the new object
-    reference_object = bpy.context.scene.objects[scene_struct['objects'][0]['scene_object_name']]
+    reference_object = scene_struct['objects'][0]
     scene_struct = add_object_with_relationship(args,scene_struct,reference_object,model2_key, random.choice(models_3d[model2_key]),relationship,table_height,table_limit_points)
 
     if (scene_struct is False):
