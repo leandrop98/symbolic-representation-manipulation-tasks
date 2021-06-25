@@ -213,7 +213,7 @@ def render_scene(args,scene_struct,table_height,
   # We use functionality specific to the CYCLES renderer so BLENDER_RENDER
   # cannot be used.
   render_args = bpy.context.scene.render
-  render_args.engine = "BLENDER_EEVEE"
+  render_args.engine = "CYCLES"
   render_args.filepath = args.output_image_dir + "/" + output_image_id + ".png"
   render_args.resolution_x = args.width
   render_args.resolution_y = args.height
