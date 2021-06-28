@@ -1104,7 +1104,7 @@ def main(args):
  
   models_type = list(config_models.keys())
 
-  num_imgs_render = 1
+  num_imgs_render = 10
   # Generate images with mug, bottle and books
   while(num_imgs_render>0):
     
