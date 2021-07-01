@@ -1115,7 +1115,7 @@ def main(args):
  
   models_type = list(config_models.keys())
 
-  num_imgs_render = 100
+  num_imgs_render = 1
   # Generate images with mug, bottle and books
   while(num_imgs_render>0):
     
@@ -1164,7 +1164,7 @@ def main(args):
     if render_scene(args,scene_struct,table_height):
       num_imgs_render -= 1 # if the image is rendered subtract
 
-  #bpy.ops.wm.quit_blender()
+  bpy.ops.wm.quit_blender()
 
     ### !!!!!! Things to do !!!!!!
     # Create configuration file for the object type
