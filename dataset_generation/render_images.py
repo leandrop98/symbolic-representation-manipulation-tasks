@@ -214,7 +214,7 @@ def render_scene(args,scene_struct,table_height,
   # We use functionality specific to the CYCLES renderer so BLENDER_RENDER
   # cannot be used.
   render_args = bpy.context.scene.render
-  render_args.engine = "CYCLES"
+  render_args.engine = "BLENDER_EEVEE"
   render_args.filepath = args.output_image_dir + "/" + output_image_id + ".png"
   render_args.resolution_x = args.width
   render_args.resolution_y = args.height
@@ -228,8 +228,20 @@ def render_scene(args,scene_struct,table_height,
       bpy.context.user_preferences.system.compute_device_type = 'CUDA'
       bpy.context.user_preferences.system.compute_device = 'CUDA_0'
     else:
-      cycles_prefs = bpy.context.user_preferences.addons['cycles'].preferences
-      cycles_prefs.compute_device_type = 'CUDA'
+      cycles_preferences = bpy.context.preferences.addons['cycles'].preferences
+      bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
+      bpy.context.preferences.addons['cycles'].preferences.compute_device = 'CUDA_MULTI_2'
+      cuda_devices, opencl_devices = cycles_preferences.get_devices()
+      gpu_device = None
+
+      for device in cycles_preferences.devices:
+          device.use = False #reset all other devices
+          if device.type == "CUDA" and device in cuda_devices:
+              gpu_device = device
+
+      bpy.context.scene.cycles.device = "GPU"
+      bpy.context.preferences.addons["cycles"].preferences.compute_device_type = gpu_device.type
+      gpu_device.use = True
 
   # Some CYCLES-specific stuff
   bpy.data.worlds['World'].cycles.sample_as_light = True
@@ -237,8 +249,6 @@ def render_scene(args,scene_struct,table_height,
   bpy.context.scene.cycles.samples = args.render_num_samples
   bpy.context.scene.cycles.transparent_min_bounces = args.render_min_bounces
   bpy.context.scene.cycles.transparent_max_bounces = args.render_max_bounces
-  if args.use_gpu == 1:
-    bpy.context.scene.cycles.device = 'GPU'
 
 
 
@@ -299,8 +309,8 @@ def render_scene(args,scene_struct,table_height,
     all_x = [point[0] for point in bbox_3d_obj]
     all_y = [point[1] for point in bbox_3d_obj]
 
-    # We only need top-left and bottom-right
-    obj_struct["2d_bbox"] = [(min(all_x),max(all_y)),(max(all_x),min(all_y))]
+    # We only need bottom-left (top-left visually) and top-right (bottom-right visually)
+    obj_struct["2d_bbox"] = [(min(all_x),min(all_y)),(max(all_x),max(all_y))]
 
   scene_struct['image_filename'] =  os.path.basename(output_image_id+".png")
   scene_struct['relationships'] = compute_all_relationships(args,scene_struct)
@@ -309,7 +319,8 @@ def render_scene(args,scene_struct,table_height,
   if check_visibility(args, scene_struct,100) is False:
     return False
   
-  objects_overlap(scene_struct,10)
+  if(objects_overlap(scene_struct,5)):
+    return False
 
 
 
@@ -997,10 +1008,10 @@ def check_visibility(args, scene_struct, min_visible_percentage_per_object):
     object_area = abs(obj_bbox[0][0]- obj_bbox[1][0]) * abs(obj_bbox[0][1]- obj_bbox[1][1])
     l_obj =  obj_bbox[0]
     r_obj = obj_bbox[1]    
-    l_img = (0,height)
-    r_img = (width,0)
+    l_img = (0,0)
+    r_img = (width,height)
     x_dist = min(r_obj[0], r_img[0])- max(l_obj[0], l_img[0])
-    y_dist = min(l_obj[1], l_img[1])-max(r_obj[1], r_img[1])
+    y_dist = min(r_obj[1], r_img[1])-max(l_obj[1], l_img[1])
     
     if( x_dist > 0 and y_dist > 0 ):
       inters_area = x_dist * y_dist
@@ -1122,7 +1133,7 @@ def main(args):
 
     # Choose random relation for the objects
     relationship = random.choice(relationships)
-    relationship = INSIDE_UP
+
     model1_key, model2_key = select_two_models(models_type,relationship)
     
     
