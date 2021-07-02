@@ -42,8 +42,9 @@ def display_images(bbox2d,bbox3d):
             if(bbox2d):
                 #Draw 2d bounding box
                 for obj in data["objects"]:
-                    cv.rectangle(img,obj['2d_bbox'][0],obj['2d_bbox'][1],(0,0,250),2)
-                    cv.putText(img,obj['category'],(obj['2d_bbox'][0][0], obj['2d_bbox'][0][1]+20), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color= (0,0,255),thickness=1)
+                    cv.rectangle(img,(obj['2d_bbox'][0][0],obj['2d_bbox'][1][1]),
+                    (obj['2d_bbox'][1][0], obj['2d_bbox'][0][1]),(0,0,250),2)
+                    cv.putText(img,obj['category'],(obj['2d_bbox'][0][0], obj['2d_bbox'][1][1]+20), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color= (0,0,255),thickness=1)
 
             # Resize the image to add the relationships text
 

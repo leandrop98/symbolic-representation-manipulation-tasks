@@ -1115,7 +1115,7 @@ def main(args):
  
   models_type = list(config_models.keys())
 
-  num_imgs_render = 1
+  num_imgs_render = 100
   # Generate images with mug, bottle and books
   while(num_imgs_render>0):
     
@@ -1130,7 +1130,6 @@ def main(args):
     
     # Randomly choose 2 or 3 objects in the image
     num_objects = random.choice([2,3])
-
     # Choose random relation for the objects
     relationship = random.choice(relationships)
 
@@ -1151,11 +1150,9 @@ def main(args):
         relationship = random.choice(relationships)
         model2_key = select_model(model1_key,models_type,relationship)
 
-
-
-    # Add the new object
-    reference_object = scene_struct['objects'][0]
-    scene_struct = add_object_with_relationship(args,scene_struct,reference_object,model2_key, random.choice(models_3d[model2_key]),relationship,table_height,table_limit_points)
+      # Add the new object
+      reference_object = scene_struct['objects'][0]
+      scene_struct = add_object_with_relationship(args,scene_struct,reference_object,model2_key, random.choice(models_3d[model2_key]),relationship,table_height,table_limit_points)
 
     if (scene_struct is False):
       print("is false")
