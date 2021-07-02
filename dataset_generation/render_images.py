@@ -214,7 +214,7 @@ def render_scene(args,scene_struct,table_height,
   # We use functionality specific to the CYCLES renderer so BLENDER_RENDER
   # cannot be used.
   render_args = bpy.context.scene.render
-  render_args.engine = "BLENDER_EEVEE"
+  render_args.engine = "CYCLES"
   render_args.filepath = args.output_image_dir + "/" + output_image_id + ".png"
   render_args.resolution_x = args.width
   render_args.resolution_y = args.height
@@ -233,7 +233,7 @@ def render_scene(args,scene_struct,table_height,
       bpy.context.preferences.addons['cycles'].preferences.compute_device = 'CUDA_MULTI_2'
       cuda_devices, opencl_devices = cycles_preferences.get_devices()
       gpu_device = None
-
+      print("devices: ", cuda_devices, opencl_devices )
       for device in cycles_preferences.devices:
           device.use = False #reset all other devices
           if device.type == "CUDA" and device in cuda_devices:
@@ -521,7 +521,8 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
     'category': objects_category[0],
     'state':obj1_state,
     '3d_bbox': None, # It has to be calculated later with the camera information
-  }
+    'model_path':obj1_path
+}
 
   obj2_metadata = {
     'id':str(uuid.uuid1()),
@@ -529,6 +530,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
     'category': objects_category[1],
     'state':obj2_state,
     '3d_bbox': None, # It has to be calculated later with the camera information
+    'model_path':obj2_path
   }
   scene_struct['objects'].extend([obj1_metadata,obj2_metadata])
   # Keep track of the desired relationships
@@ -706,6 +708,7 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
     'category': object_category,
     'state':obj2_state,
     '3d_bbox': None, # It has to be calculated later with the camera information
+    'model_path':obj2_path
   }
   scene_struct['objects'].extend([obj2_metadata])
   # Keep track of the desired relationships
@@ -1115,7 +1118,7 @@ def main(args):
  
   models_type = list(config_models.keys())
 
-  num_imgs_render = 100
+  num_imgs_render = 2000
   # Generate images with mug, bottle and books
   while(num_imgs_render>0):
     
