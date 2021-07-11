@@ -1,4 +1,3 @@
-from utils import add_object
 import requests
 import bpy
 import math, sys, random, argparse, json, os, tempfile
@@ -38,34 +37,6 @@ UPRIGHT = 'upright'
 UPSIDE_DOWN = 'upside_down'
 LAYING = 'laying'
 
-## SHAPE NET Test Query
-""" query = "kitchen"
-r =requests.get('https://shapenet.org/solr/models3d/select?q='+query+'+AND+source%3A3dw&rows=1000&wt=json')
-if(r.status_code==200):
-    print(r.text)   """ 
-
-## BLENDER iteration
-# remove mesh Cube
-""" bpy.ops.object.select_all(action='DESELECT')
-# Deselect all
-
-
-# https://wiki.blender.org/wiki/Reference/Release_Notes/2.80/Python_API/Scene_and_Object_API
-bpy.data.objects['Cube'].select_set(True) # Blender 2.8x
-bpy.ops.object.delete() 
-
-# load object in scene
-file_loc = '/home/leandro/clevr/clevr-dataset-gen/image_generation/mug.obj'
-imported_object = bpy.ops.import_scene.obj(filepath=file_loc)
-obj_object = bpy.context.selected_objects[0] ####<--Fix
-obj_object.location.x = 1
-obj_object.scale = (5,5,5)
-print('Imported name: ', obj_object.name)
-
-# print all objects in scene
-for obj in bpy.data.objects:
-    print(obj.name) """
-
 INSIDE_BLENDER = True
 try:
   import bpy, bpy_extras
@@ -91,82 +62,82 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--base_scene_blendfile', default='data/base_scene.blend',
     help="Base blender file on which all scenes are based; includes " +
           "ground plane, lights, and camera.")
-parser.add_argument('--properties_json', default='data/properties.json',
-    help="JSON file defining objects, materials, sizes, and colors. " +
-         "The \"colors\" field maps from CLEVR color names to RGB values; " +
-         "The \"sizes\" field maps from CLEVR size names to scalars used to " +
-         "rescale object models; the \"materials\" and \"shapes\" fields map " +
-         "from CLEVR material and shape names to .blend files in the " +
-         "--object_material_dir and --shape_dir directories respectively.")
+# parser.add_argument('--properties_json', default='data/properties.json',
+#     help="JSON file defining objects, materials, sizes, and colors. " +
+#          "The \"colors\" field maps from CLEVR color names to RGB values; " +
+#          "The \"sizes\" field maps from CLEVR size names to scalars used to " +
+#          "rescale object models; the \"materials\" and \"shapes\" fields map " +
+#          "from CLEVR material and shape names to .blend files in the " +
+#          "--object_material_dir and --shape_dir directories respectively.")
 parser.add_argument('--models_dir', default='data/models',
     help="Directory where .obj files for object models are stored")
 
 
 # Settings for objects
-parser.add_argument('--min_objects', default=3, type=int,
-    help="The minimum number of objects to place in each scene")
-parser.add_argument('--max_objects', default=10, type=int,
-    help="The maximum number of objects to place in each scene")
-parser.add_argument('--min_dist', default=0.25, type=float,
-    help="The minimum allowed distance between object centers")
-parser.add_argument('--margin', default=0.4, type=float,
-    help="Along all cardinal directions (left, right, front, back), all " +
-         "objects will be at least this distance apart. This makes resolving " +
-         "spatial relationships slightly less ambiguous.")
-parser.add_argument('--min_pixels_per_object', default=200, type=int,
-    help="All objects will have at least this many visible pixels in the " +
-         "final rendered images; this ensures that no objects are fully " +
-         "occluded by other objects.")
-parser.add_argument('--max_retries', default=50, type=int,
-    help="The number of times to try placing an object before giving up and " +
-         "re-placing all objects in the scene.")
+# parser.add_argument('--min_objects', default=3, type=int,
+#     help="The minimum number of objects to place in each scene")
+# parser.add_argument('--max_objects', default=10, type=int,
+#     help="The maximum number of objects to place in each scene")
+# parser.add_argument('--min_dist', default=0.25, type=float,
+#     help="The minimum allowed distance between object centers")
+# parser.add_argument('--margin', default=0.4, type=float,
+#     help="Along all cardinal directions (left, right, front, back), all " +
+#          "objects will be at least this distance apart. This makes resolving " +
+#          "spatial relationships slightly less ambiguous.")
+# parser.add_argument('--min_pixels_per_object', default=200, type=int,
+#     help="All objects will have at least this many visible pixels in the " +
+#          "final rendered images; this ensures that no objects are fully " +
+#          "occluded by other objects.")
+# parser.add_argument('--max_retries', default=50, type=int,
+#     help="The number of times to try placing an object before giving up and " +
+#          "re-placing all objects in the scene.")
 parser.add_argument('--border_limit', default=4, type=float,
     help="The number to change the sensitivy of the relatioships. Higher number means the single "+
     "relationships are more narrow")
 parser.add_argument('--radius_near_far', default=2, type=float,
-    help="The number to change the radius of what is consideres near or far from an object")
+    help="Limit of the radius of what is considered \"near\" or \"far\" from an object")
 
 # Output settings
-parser.add_argument('--start_idx', default=0, type=int,
-    help="The index at which to start for numbering rendered images. Setting " +
-         "this to non-zero values allows you to distribute rendering across " +
-         "multiple machines and recombine the results later.")
+# parser.add_argument('--start_idx', default=0, type=int,
+#     help="The index at which to start for numbering rendered images. Setting " +
+#          "this to non-zero values allows you to distribute rendering across " +
+#          "multiple machines and recombine the results later.")
 parser.add_argument('--num_images', default=5, type=int,
     help="The number of images to render")
 parser.add_argument('--filename_prefix', default='CLEVR',
-    help="This prefix will be prepended to the rendered images and JSON scenes")
-parser.add_argument('--split', default='new',
-    help="Name of the split for which we are rendering. This will be added to " +
-         "the names of rendered images, and will also be stored in the JSON " +
-         "scene structure for each image.")
+    help="This prefix will be prepended to the rendered images and JSON files")
+# parser.add_argument('--split', default='new',
+#     help="Name of the split for which we are rendering. This will be added to " +
+#          "the names of rendered images, and will also be stored in the JSON " +
+#          "scene structure for each image.")
 parser.add_argument('--output_image_dir', default='../output/images/',
     help="The directory where output images will be stored. It will be " +
          "created if it does not exist.")
 parser.add_argument('--delete_previous_images', default=False,
     help="Delete previous generated images from the directory where output images will be stored.")
-parser.add_argument('--output_scene_dir', default='../output/scenes/',
-    help="The directory where output JSON scene structures will be stored. " +
-         "It will be created if it does not exist.")
-parser.add_argument('--output_scene_file', default='../output/CLEVR_scenes.json',
-    help="Path to write a single JSON file containing all scene information")
-parser.add_argument('--output_blend_dir', default='output/blendfiles',
-    help="The directory where blender scene files will be stored, if the " +
-         "user requested that these files be saved using the " +
-         "--save_blendfiles flag; in this case it will be created if it does " +
-         "not already exist.")
-parser.add_argument('--save_blendfiles', type=int, default=0,
-    help="Setting --save_blendfiles 1 will cause the blender scene file for " +
-         "each generated image to be stored in the directory specified by " +
-         "the --output_blend_dir flag. These files are not saved by default " +
-         "because they take up ~5-10MB each.")
-parser.add_argument('--version', default='1.0',
-    help="String to store in the \"version\" field of the generated JSON file")
-parser.add_argument('--license',
-    default="Creative Commons Attribution (CC-BY 4.0)",
-    help="String to store in the \"license\" field of the generated JSON file")
-parser.add_argument('--date', default=dt.today().strftime("%m/%d/%Y"),
-    help="String to store in the \"date\" field of the generated JSON file; " +
-         "defaults to today's date")
+# parser.add_argument('--output_scene_dir', default='../output/scenes/',
+#     help="The directory where output JSON scene structures will be stored. " +
+#          "It will be created if it does not exist.")
+# parser.add_argument('--output_scene_file', default='../output/CLEVR_scenes.json',
+#     help="Path to write a single JSON file containing all scene information")
+# parser.add_argument('--output_blend_dir', default='output/blendfiles',
+#     help="The directory where blender scene files will be stored, if the " +
+#          "user requested that these files be saved using the " +
+#          "--save_blendfiles flag; in this case it will be created if it does " +
+#          "not already exist.")
+# parser.add_argument('--save_blendfiles', type=int, default=0,
+#     help="Setting --save_blendfiles 1 will cause the blender scene file for " +
+#          "each generated image to be stored in the directory specified by " +
+#          "the --output_blend_dir flag. These files are not saved by default " +
+#          "because they take up ~5-10MB each.")
+# parser.add_argument('--version', default='1.0',
+#     help="String to store in the \"version\" field of the generated JSON file")
+# parser.add_argument('--license',
+#     default="Creative Commons Attribution (CC-BY 4.0)",
+#     help="String to store in the \"license\" field of the generated JSON file")
+# parser.add_argument('--date', default=dt.today().strftime("%m/%d/%Y"),
+#     help="String to store in the \"date\" field of the generated JSON file; " +
+#          "defaults to today's date")
 
 # Rendering options
 parser.add_argument('--use_gpu', default=0, type=int,
