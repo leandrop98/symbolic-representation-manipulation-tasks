@@ -505,8 +505,8 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   }
   scene_struct['objects'].extend([obj1_metadata,obj2_metadata])
   # Keep track of the desired relationships
-  scene_struct['desired_relationships'].append({"object":obj1_metadata["id"],
-                          "subject":obj2_metadata["id"],
+  scene_struct['desired_relationships'].append({"subject":obj1_metadata["id"],
+                          "object":obj2_metadata["id"],
                           "predicate":relationship
                         })
   return scene_struct
@@ -724,26 +724,26 @@ def compute_all_relationships(args,scene_struct):
       if(min_y_obj1>min_y_obj2 and max_y_obj1<max_y_obj2 and min_x_obj1>min_x_obj2 and max_x_obj1<max_x_obj2 
       and (max_z_obj2-min_z_obj2) + (max_z_obj1-min_z_obj1) > 0.0001 + abs(max(max_z_obj1,max_z_obj2) - min(min_z_obj1,min_z_obj2)) and
       obj1_struct["category"] !='Table' and obj2_struct["category"]!='Table' ): # height of both objects must be higher that the distances of extremes of both objects 
-        all_relationships.extend([{"object":obj1_struct["id"],
-                      "subject":obj2_struct["id"],
+        all_relationships.extend([{"subject":obj1_struct["id"],
+                      "object":obj2_struct["id"],
                       "predicate":INSIDE
         }])
         if(abs(max_z_obj2-max_z_obj1)<0.1):
-           all_relationships.append({"object":obj2_struct["id"],
-                      "subject":obj1_struct["id"],
+           all_relationships.append({"subject":obj2_struct["id"],
+                      "object":obj1_struct["id"],
                       "predicate":ON
           })
       # ON
       elif((abs(min_z_obj1 - max_z_obj2) <= 0.001) 
         and (max_z_obj2-min_z_obj2) + (max_z_obj1-min_z_obj1) - abs(max(max_z_obj1,max_z_obj2) - min(min_z_obj1,min_z_obj2)) <0.001 ):
-        all_relationships.extend([{"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
+        all_relationships.extend([{"subject":obj1_struct["id"],
+                        "object":obj2_struct["id"],
                         "predicate":ON
                         }])
       # UNDER
       elif(abs(min_z_obj2 - max_z_obj1 )<= 0.001):
-        all_relationships.extend([{"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
+        all_relationships.extend([{"subject":obj1_struct["id"],
+                        "object":obj2_struct["id"],
                         "predicate":UNDER
         }])
 
@@ -753,71 +753,71 @@ def compute_all_relationships(args,scene_struct):
       if(obj1_struct["category"] !='Table' and obj2_struct["category"]!='Table' ):
         # NEAR
         if(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) <= args.radius_near_far ):
-          all_relationships.extend([{"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
+          all_relationships.extend([{"subject":obj1_struct["id"],
+                        "object":obj2_struct["id"],
                         "predicate":NEAR
         }])
 
         # FAR
         elif(math.sqrt(pow(obj1.location.x-obj2.location.x,2) + pow(obj1.location.y-obj2.location.y,2) + pow(obj1.location.z-obj2.location.z,2) ) > args.radius_near_far ):
-          all_relationships.extend([{"object":obj1_struct["id"],
-                        "subject":obj2_struct["id"],
+          all_relationships.extend([{"subject":obj1_struct["id"],
+                        "object":obj2_struct["id"],
                         "predicate":FAR
         }])
 
         # BEHIND
         if(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
           obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_x_obj1<=min_x_obj2):
-                all_relationships.extend([{"object":obj1_struct["id"],
-                          "subject":obj2_struct["id"],
+                all_relationships.extend([{"subject":obj1_struct["id"],
+                          "object":obj2_struct["id"],
                           "predicate":BEHIND
                         }])
         # FRONT OF
         elif(obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and
           obj1.location.y-obj2.location.y >= -(obj1.location.x-obj2.location.x)/args.border_limit and min_x_obj1 >= max_x_obj2):
-          all_relationships.extend( [{"object":obj1_struct["id"],
-                          "subject":obj2_struct["id"],
+          all_relationships.extend( [{"subject":obj1_struct["id"],
+                          "object":obj2_struct["id"],
                           "predicate":FRONT
                         }])
         # LEFT
         elif(obj1.location.y-obj2.location.y <= -abs(obj1.location.x-obj2.location.x)*args.border_limit and max_y_obj1<=min_y_obj2):
-          all_relationships.extend([{"object":obj1_struct["id"],
-                          "subject":obj2_struct["id"],
+          all_relationships.extend([{"subject":obj1_struct["id"],
+                          "object":obj2_struct["id"],
                           "predicate":LEFT
                         }])
         # RIGHT
         elif(obj1.location.y-obj2.location.y >= abs(obj1.location.x-obj2.location.x)*args.border_limit and min_y_obj1>=max_y_obj2):
-          all_relationships.extend([{"object":obj1_struct["id"],
-                          "subject":obj2_struct["id"],
+          all_relationships.extend([{"subject":obj1_struct["id"],
+                          "object":obj2_struct["id"],
                           "predicate":RIGHT
                         }])
         # RIGHT_BEHIND
         elif(obj1.location.y-obj2.location.y >=  -(obj1.location.x-obj2.location.x)/args.border_limit and
           obj1.location.y-obj2.location.y <= -args.border_limit*(obj1.location.x-obj2.location.x) 
           and min_y_obj1>=max_y_obj2 and max_x_obj1<=min_x_obj2 ):
-          all_relationships.extend([{"object":obj1_struct["id"],
-                          "subject":obj2_struct["id"],
+          all_relationships.extend([{"subject":obj1_struct["id"],
+                          "object":obj2_struct["id"],
                           "predicate":RIGHT_BEHIND
                         }])
         # LEFT_BEHIND
         elif(obj1.location.y-obj2.location.y >= args.border_limit*(obj1.location.x-obj2.location.x) and
           obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<=min_y_obj2 and max_x_obj1<=min_x_obj2):
-          all_relationships.extend([{"object":obj1_struct["id"],
-                          "subject":obj2_struct["id"],
+          all_relationships.extend([{"subject":obj1_struct["id"],
+                          "object":obj2_struct["id"],
                           "predicate":LEFT_BEHIND
                         }])
         # RIGHT_FRONT
         elif(obj1.location.y-obj2.location.y >= (obj1.location.x-obj2.location.x)/args.border_limit and
           obj1.location.y-obj2.location.y <= (obj1.location.x-obj2.location.x)*args.border_limit and min_y_obj1>=max_y_obj2 and min_x_obj1 >= max_x_obj2):
-          all_relationships.extend([{"object":obj1_struct["id"],
-                          "subject":obj2_struct["id"],
+          all_relationships.extend([{"subject":obj1_struct["id"],
+                          "object":obj2_struct["id"],
                           "predicate":RIGHT_FRONT
                         }])
         # LEFT_FRONT
         elif(obj1.location.y-obj2.location.y >= -args.border_limit*(obj1.location.x-obj2.location.x)and
           obj1.location.y-obj2.location.y <= -(obj1.location.x-obj2.location.x)/args.border_limit and max_y_obj1<=min_y_obj2 and min_x_obj1 >= max_x_obj2):
-          all_relationships.extend([{"object":obj1_struct["id"],
-                          "subject":obj2_struct["id"],
+          all_relationships.extend([{"subject":obj1_struct["id"],
+                          "object":obj2_struct["id"],
                           "predicate":LEFT_FRONT
                         }])
 
@@ -848,7 +848,7 @@ def objects_overlap(scene_struct,max_percentage):
       
       # If the objects are supposed to be inside each other the percentage is 50%
       for rel in scene_struct['desired_relationships']:
-        if (rel['object'] == obj1_struct['id'] and rel['subject']==obj2_struct['id'] 
+        if (rel['subject'] == obj1_struct['id'] and rel['object']==obj2_struct['id'] 
         and (rel['predicate'] == INSIDE_UP or rel['predicate'] == INSIDE)):
           max_percentage = 50
 

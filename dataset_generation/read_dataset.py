@@ -1,9 +1,7 @@
 
 import os, json
-import pandas as pd
 import cv2 as cv
 import sys
-import numpy as np
 import math
 
 path = "../output/images"
@@ -71,7 +69,7 @@ def display_images(bbox2d,bbox3d):
                         subject = obj["category"]
                     if obj["id"] == relationship["object"]:
                         object = obj["category"]
-                cv.putText(img,object + "-" + relationship["predicate"]+"-" + subject, (width + 10+ (200*column),text_position), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color = (0,0,0),lineType=1)
+                cv.putText(img,subject + "-" + relationship["predicate"]+"-" + object, (width + 10+ (200*column),text_position), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color = (0,0,0),lineType=1)
                 text_position += 15
                 
                 # Add 1 line
