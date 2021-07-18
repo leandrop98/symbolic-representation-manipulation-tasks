@@ -986,9 +986,9 @@ def check_visibility(args, scene_struct, min_visible_percentage_per_object):
     if obj['category'] is "Table":
       continue
     obj_bbox = obj['2d_bbox']
-    object_area = abs(obj_bbox[0][0]- obj_bbox[1][0]) * abs(obj_bbox[0][1]- obj_bbox[1][1])
-    l_obj =  obj_bbox[0]
-    r_obj = obj_bbox[1]    
+    object_area = abs(obj_bbox[0]- obj_bbox[2]) * abs(obj_bbox[1]- obj_bbox[3])
+    l_obj =  [obj_bbox[0],obj_bbox[1]]
+    r_obj = [obj_bbox[2],  obj_bbox[3]]
     l_img = (0,0)
     r_img = (width,height)
     x_dist = min(r_obj[0], r_img[0])- max(l_obj[0], l_img[0])

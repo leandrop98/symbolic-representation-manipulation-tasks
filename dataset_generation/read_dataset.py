@@ -42,7 +42,7 @@ def display_images(bbox2d,bbox3d):
                 for obj in data["objects"]:
                     cv.rectangle(img,(obj['2d_bbox'][0],obj['2d_bbox'][1]),
                     (obj['2d_bbox'][2], obj['2d_bbox'][3]),(0,0,250),2)
-                    cv.putText(img,obj['category'],(obj['2d_bbox'][0][0], obj['2d_bbox'][1][1]+20), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color= (0,0,255),thickness=1)
+                    cv.putText(img,obj['category'],(obj['2d_bbox'][0], obj['2d_bbox'][3]+20), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color= (0,0,255),thickness=1)
 
             # Resize the image to add the relationships text
 
