@@ -185,7 +185,7 @@ def render_scene(args,scene_struct,table_height,
   # We use functionality specific to the CYCLES renderer so BLENDER_RENDER
   # cannot be used.
   render_args = bpy.context.scene.render
-  render_args.engine = "CYCLES"
+  render_args.engine = "BLENDER_EEVEE"
   render_args.filepath = args.output_image_dir + "/" + output_image_id + ".png"
   render_args.resolution_x = args.width
   render_args.resolution_y = args.height
@@ -281,7 +281,14 @@ def render_scene(args,scene_struct,table_height,
     all_y = [point[1] for point in bbox_3d_obj]
 
     # We only need bottom-left (top-left visually) and top-right (bottom-right visually)
-    obj_struct["2d_bbox"] = [(min(all_x),min(all_y)),(max(all_x),max(all_y))]
+    
+    # (min(all_x),min(all_y)),(max(all_x),max(all_y))
+    
+    x0 = min(all_x) if min(all_x)>0 else 0 
+    y0 = min(all_y) if min(all_y)>0 else 0 
+    x1 = max(all_x) if max(all_x) < args.width else args.width
+    y1 = max(all_y) if max(all_y) < args.height else args.height
+    obj_struct["2d_bbox"] = [x0,y0,x1,y1]
 
   scene_struct['image_filename'] =  os.path.basename(output_image_id+".png")
   scene_struct['relationships'] = compute_all_relationships(args,scene_struct)
