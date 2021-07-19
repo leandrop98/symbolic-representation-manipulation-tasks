@@ -185,7 +185,7 @@ def render_scene(args,scene_struct,table_height,
   # We use functionality specific to the CYCLES renderer so BLENDER_RENDER
   # cannot be used.
   render_args = bpy.context.scene.render
-  render_args.engine = "BLENDER_EEVEE"
+  render_args.engine = "CYCLES"
   render_args.filepath = args.output_image_dir + "/" + output_image_id + ".png"
   render_args.resolution_x = args.width
   render_args.resolution_y = args.height
@@ -998,7 +998,11 @@ def check_visibility(args, scene_struct, min_visible_percentage_per_object):
       inters_area = x_dist * y_dist
     else:
       inters_area = 0
-    percentage_visible = (inters_area/object_area)*100
+    
+    if(object_area == 0):
+      percentage_visible = 0
+    else:
+      percentage_visible = (inters_area/object_area)*100
     print(obj['category'] +" is "+ str(percentage_visible) + "%% in the image")
     if (percentage_visible<min_visible_percentage_per_object):
       print("Objects are not visible!")
