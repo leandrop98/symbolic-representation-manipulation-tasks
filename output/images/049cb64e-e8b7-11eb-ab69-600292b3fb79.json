@@ -1,0 +1,208 @@
+{
+  "objects": [
+    {
+      "id": "049cb64b-e8b7-11eb-ab69-600292b3fb79",
+      "scene_object_name": "Table",
+      "category": "Table",
+      "3d_bbox": [
+        [
+          230,
+          175,
+          20.10031509399414
+        ],
+        [
+          67,
+          180,
+          19.872922897338867
+        ],
+        [
+          59,
+          43,
+          18.432649612426758
+        ],
+        [
+          236,
+          39,
+          18.66004180908203
+        ],
+        [
+          309,
+          439,
+          12.395341873168945
+        ],
+        [
+          43,
+          452,
+          12.167950630187988
+        ],
+        [
+          27,
+          254,
+          10.727676391601562
+        ],
+        [
+          328,
+          243,
+          10.95506763458252
+        ]
+      ],
+      "model_path": "data/models/Table/64b2121e41762bd47954eb05bbab463f/models/model_normalized.obj",
+      "2d_bbox": [
+        27,
+        39,
+        320,
+        240
+      ]
+    },
+    {
+      "id": "049cb64c-e8b7-11eb-ab69-600292b3fb79",
+      "scene_object_name": "Bottle_inside_up_2021-07-19 19:30:32.066038",
+      "category": "Bottle",
+      "state": "upright",
+      "3d_bbox": [
+        [
+          150,
+          120,
+          14.593961715698242
+        ],
+        [
+          160,
+          124,
+          14.441162109375
+        ],
+        [
+          160,
+          75,
+          14.055275917053223
+        ],
+        [
+          150,
+          71,
+          14.208075523376465
+        ],
+        [
+          159,
+          116,
+          14.762807846069336
+        ],
+        [
+          170,
+          120,
+          14.610008239746094
+        ],
+        [
+          170,
+          71,
+          14.224122047424316
+        ],
+        [
+          159,
+          67,
+          14.376921653747559
+        ]
+      ],
+      "model_path": "data/models/Bottle/109d55a137c042f5760315ac3bf2c13e/models/model_normalized.obj",
+      "2d_bbox": [
+        150,
+        67,
+        170,
+        124
+      ]
+    },
+    {
+      "id": "049cb64d-e8b7-11eb-ab69-600292b3fb79",
+      "scene_object_name": "Mug_inside_up_2021-07-19 19:30:32.113957",
+      "category": "Mug",
+      "state": "upside_down",
+      "3d_bbox": [
+        [
+          187,
+          73,
+          14.000048637390137
+        ],
+        [
+          147,
+          74,
+          13.961090087890625
+        ],
+        [
+          147,
+          103,
+          14.188583374023438
+        ],
+        [
+          187,
+          102,
+          14.22754192352295
+        ],
+        [
+          185,
+          63,
+          14.431052207946777
+        ],
+        [
+          146,
+          64,
+          14.392093658447266
+        ],
+        [
+          146,
+          93,
+          14.619587898254395
+        ],
+        [
+          184,
+          92,
+          14.658546447753906
+        ]
+      ],
+      "model_path": "data/models/Mug/cf777e14ca2c7a19b4aad3cc5ce7ee8/models/model_normalized.obj",
+      "2d_bbox": [
+        146,
+        63,
+        187,
+        103
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "subject": "049cb64b-e8b7-11eb-ab69-600292b3fb79",
+      "object": "049cb64c-e8b7-11eb-ab69-600292b3fb79",
+      "predicate": "under"
+    },
+    {
+      "subject": "049cb64c-e8b7-11eb-ab69-600292b3fb79",
+      "object": "049cb64b-e8b7-11eb-ab69-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "049cb64c-e8b7-11eb-ab69-600292b3fb79",
+      "object": "049cb64d-e8b7-11eb-ab69-600292b3fb79",
+      "predicate": "inside"
+    },
+    {
+      "subject": "049cb64d-e8b7-11eb-ab69-600292b3fb79",
+      "object": "049cb64c-e8b7-11eb-ab69-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "049cb64c-e8b7-11eb-ab69-600292b3fb79",
+      "object": "049cb64d-e8b7-11eb-ab69-600292b3fb79",
+      "predicate": "near"
+    },
+    {
+      "subject": "049cb64d-e8b7-11eb-ab69-600292b3fb79",
+      "object": "049cb64c-e8b7-11eb-ab69-600292b3fb79",
+      "predicate": "near"
+    }
+  ],
+  "desired_relationships": [
+    {
+      "subject": "049cb64c-e8b7-11eb-ab69-600292b3fb79",
+      "object": "049cb64d-e8b7-11eb-ab69-600292b3fb79",
+      "predicate": "inside_up"
+    }
+  ],
+  "image_filename": "049cb64e-e8b7-11eb-ab69-600292b3fb79.png"
+}
