@@ -1002,7 +1002,7 @@ def check_visibility(args, scene_struct, min_visible_percentage_per_object):
     if(object_area == 0):
       percentage_visible = 0
     else:
-      percentage_visible = (inters_area/object_area)*100
+      percentage_visible = (inters_area/object_area+0.0000001)*100
     print(obj['category'] +" is "+ str(percentage_visible) + "%% in the image")
     if (percentage_visible<min_visible_percentage_per_object):
       print("Objects are not visible!")
@@ -1134,7 +1134,7 @@ def main(args):
       while(model2_key is False ):
         relationship = random.choice(relationships)
         model2_key = select_model(model1_key,models_type,relationship)
-
+      
       # Add the new object
       reference_object = scene_struct['objects'][0]
       scene_struct = add_object_with_relationship(args,scene_struct,reference_object,model2_key, random.choice(models_3d[model2_key]),relationship,table_height,table_limit_points)
