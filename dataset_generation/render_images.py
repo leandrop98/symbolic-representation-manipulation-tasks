@@ -154,6 +154,16 @@ parser.add_argument('--fill_light_jitter', default=1.0, type=float,
     help="The magnitude of random jitter to add to the fill light position.")
 parser.add_argument('--back_light_jitter', default=1.0, type=float,
     help="The magnitude of random jitter to add to the back light position.")
+
+parser.add_argument('--key_light_power', default=[200, 500], type=float,
+    help="The magnitude of random power range to add to the key light.")
+parser.add_argument('--fill_light_power', default=[200, 500], type=float,
+    help="The magnitude of random power to add to the fill light.")
+parser.add_argument('--back_light_power', default=[200, 500], type=float,
+    help="The magnitude of random power range to add to the back light.")
+parser.add_argument('--sunlight_power', default=[0, 0.3], type=float,
+    help="The magnitude of random power range to add to the sun light.")
+
 parser.add_argument('--camera_jitter', default=1.0, type=float,
     help="The magnitude of random jitter to add to the camera position")
 parser.add_argument('--render_num_samples', default=512, type=int,
@@ -254,6 +264,9 @@ def render_scene(args,scene_struct,table_height,
       z_jitter = 2 *rand(args.camera_jitter)
     bpy.data.objects['Camera'].location.z += z_jitter
 
+  # Add random rotation to the camera
+  #bpy.data.objects['Camera'].location.x +=  #5*rand(args.camera_jitter)
+  #delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
 
   camera = bpy.data.objects['Camera']
 
@@ -269,7 +282,17 @@ def render_scene(args,scene_struct,table_height,
     for i in range(3):
       bpy.data.objects['Lamp_Fill'].location[i] += rand(args.fill_light_jitter)
   
-  bpy.context.view_layer.update() 
+  # Random lightning conditions
+  sum_value = random.uniform(0.5,10) 
+  lamp_objects = [o for o in bpy.data.objects
+                if o.type == 'LIGHT']
+  r = [random.random() for i in range(1,5)] # four values
+  s = sum(r)
+  r = [ (i/s)*sum_value for i in r ]
+  for i, lamp in enumerate(lamp_objects):
+    lamp.data.use_nodes = True
+    lamp.data.node_tree.nodes['Emission'].inputs['Strength'].default_value = r[i]
+    bpy.context.view_layer.update() 
 
   
   # Get bounding boxes of all objects
@@ -284,20 +307,29 @@ def render_scene(args,scene_struct,table_height,
     
     # (min(all_x),min(all_y)),(max(all_x),max(all_y))
     
-    x0 = min(all_x) if min(all_x)>0 else 0 
-    y0 = min(all_y) if min(all_y)>0 else 0 
-    x1 = max(all_x) if max(all_x) < args.width else args.width
-    y1 = max(all_y) if max(all_y) < args.height else args.height
-    obj_struct["2d_bbox"] = [x0,y0,x1,y1]
+    x0 = min(all_x)
+    y0 = min(all_y)
+    x1 = max(all_x)
+    y1 = max(all_y)
+    obj_struct["2d_bbox"] = [x0,y0,x1,y1] # this contain negative values in the bounding boxes, useful to check the object visibility
 
   scene_struct['image_filename'] =  os.path.basename(output_image_id+".png")
   scene_struct['relationships'] = compute_all_relationships(args,scene_struct)
 
-   # Check if objects are visible in the picture?
+  # Check if objects are visible in the picture?
   if check_visibility(args, scene_struct,100) is False:
     return False
-  
-  if(objects_overlap(scene_struct,5)):
+
+  # Clean the negative values of the bounding boxes
+  for obj_struct in scene_struct['objects']:
+    x0 = obj_struct["2d_bbox"][0] if obj_struct["2d_bbox"][0] > 0 else 0 
+    y0 = obj_struct["2d_bbox"][1] if obj_struct["2d_bbox"][1] > 0 else 0 
+    x1 = obj_struct["2d_bbox"][2] if obj_struct["2d_bbox"][2] < args.width else args.width
+    y1 = obj_struct["2d_bbox"][3] if obj_struct["2d_bbox"][3] < args.height else args.height
+    obj_struct["2d_bbox"] = [x0,y0,x1,y1]
+
+
+  if(objects_overlap(scene_struct,max_percentage = 5)):
     return False
 
 
@@ -492,20 +524,31 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
             override = {'window': window, 'screen': screen, 'area': area}
             bpy.ops.screen.screen_full_area(override)
             break
+        
+      
+
+  cat_apenddix1 = ''
+  cat_apenddix2 = ''
+
+  if (obj1_state == UPSIDE_DOWN and objects_category[0] == 'Mug'):
+    cat_apenddix1 = '_' + UPSIDE_DOWN
+
+  if (obj2_state == UPSIDE_DOWN and objects_category[1] == 'Mug'):
+    cat_apenddix2 = '_' + UPSIDE_DOWN
 
   obj1_metadata = {
     'id':str(uuid.uuid1()),
     'scene_object_name':obj_object1.name,
-    'category': objects_category[0],
+    'category': objects_category[0]+ cat_apenddix1,
     'state':obj1_state,
     '3d_bbox': None, # It has to be calculated later with the camera information
     'model_path':obj1_path
-}
+  }
 
   obj2_metadata = {
     'id':str(uuid.uuid1()),
     'scene_object_name':obj_object2.name,
-    'category': objects_category[1],
+    'category': objects_category[1] + cat_apenddix2,
     'state':obj2_state,
     '3d_bbox': None, # It has to be calculated later with the camera information
     'model_path':obj2_path
@@ -680,10 +723,14 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
             bpy.ops.screen.screen_full_area(override)
             break
 
+  cat_appendix = ''
+  if (obj2_state == UPSIDE_DOWN and object_category == 'Mug'):
+    cat_appendix = '_' + UPSIDE_DOWN
+
   obj2_metadata = {
     'id':str(uuid.uuid1()),
     'scene_object_name':obj_object2.name,
-    'category': object_category,
+    'category': object_category + cat_appendix,
     'state':obj2_state,
     '3d_bbox': None, # It has to be calculated later with the camera information
     'model_path':obj2_path
@@ -998,7 +1045,7 @@ def check_visibility(args, scene_struct, min_visible_percentage_per_object):
       inters_area = x_dist * y_dist
     else:
       inters_area = 0
-    
+
     if(object_area == 0):
       percentage_visible = 0
     else:
