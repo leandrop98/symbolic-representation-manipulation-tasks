@@ -28,12 +28,12 @@ for json_file in json_files:
             else: 
                 all_rel_count[predicate.lower()] = 1
             im_rel_count+=1
-
+                        
         for obj in data['objects']:
             cat = obj['category']
             if cat.lower() in all_obj_count:
                 all_obj_count[cat.lower()] += 1
-            else: 
+            else:
                 all_obj_count[cat.lower()] = 1
             im_obj_count+=1
 
