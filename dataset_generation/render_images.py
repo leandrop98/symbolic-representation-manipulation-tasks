@@ -1195,11 +1195,6 @@ def main(args):
 
   bpy.ops.wm.quit_blender()
 
-    ### !!!!!! Things to do !!!!!!
-    # Create configuration file for the object type
-    # Check if all object are visible in the image if not, generate again or apply zoom out until its visible
-    #############################
-
   # TASKS
 
 
