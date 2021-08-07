@@ -1,0 +1,218 @@
+{
+  "objects": [
+    {
+      "id": "e49fbc12-f555-11eb-a459-600292b3fb79",
+      "scene_object_name": "Table",
+      "category": "Table",
+      "3d_bbox": [
+        [
+          215,
+          287,
+          22.771841049194336
+        ],
+        [
+          66,
+          290,
+          22.510221481323242
+        ],
+        [
+          63,
+          186,
+          21.863969802856445
+        ],
+        [
+          217,
+          183,
+          22.12558937072754
+        ],
+        [
+          278,
+          454,
+          14.560501098632812
+        ],
+        [
+          45,
+          463,
+          14.298881530761719
+        ],
+        [
+          40,
+          303,
+          13.652628898620605
+        ],
+        [
+          284,
+          298,
+          13.9142484664917
+        ]
+      ],
+      "model_path": "data/models/Table/aff5771db62fa63d2406c215cad9df09/models/model_normalized.obj",
+      "2d_bbox": [
+        40,
+        183,
+        284,
+        300
+      ]
+    },
+    {
+      "id": "e49fbc13-f555-11eb-a459-600292b3fb79",
+      "scene_object_name": "Spoon_left_behind_2021-08-04 20:58:02.226992",
+      "category": "Spoon",
+      "state": "upright",
+      "3d_bbox": [
+        [
+          139,
+          232,
+          17.659330368041992
+        ],
+        [
+          148,
+          234,
+          17.568286895751953
+        ],
+        [
+          148,
+          228,
+          17.54189109802246
+        ],
+        [
+          139,
+          227,
+          17.6329345703125
+        ],
+        [
+          156,
+          221,
+          18.55276870727539
+        ],
+        [
+          165,
+          222,
+          18.46172523498535
+        ],
+        [
+          165,
+          217,
+          18.435331344604492
+        ],
+        [
+          156,
+          215,
+          18.52637481689453
+        ]
+      ],
+      "model_path": "data/models/Spoon/spoon1.blend",
+      "2d_bbox": [
+        139,
+        215,
+        165,
+        234
+      ]
+    },
+    {
+      "id": "e49fbc14-f555-11eb-a459-600292b3fb79",
+      "scene_object_name": "Fork_left_behind_2021-08-04 20:58:02.242239",
+      "category": "Fork",
+      "state": "upright",
+      "3d_bbox": [
+        [
+          84,
+          200,
+          20.355215072631836
+        ],
+        [
+          48,
+          200,
+          20.327890396118164
+        ],
+        [
+          48,
+          198,
+          20.31596565246582
+        ],
+        [
+          84,
+          198,
+          20.343290328979492
+        ],
+        [
+          84,
+          201,
+          20.2654972076416
+        ],
+        [
+          47,
+          201,
+          20.23817253112793
+        ],
+        [
+          47,
+          199,
+          20.226247787475586
+        ],
+        [
+          84,
+          199,
+          20.253572463989258
+        ]
+      ],
+      "model_path": "data/models/Fork/fork3.blend",
+      "2d_bbox": [
+        47,
+        198,
+        84,
+        201
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "subject": "e49fbc12-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc13-f555-11eb-a459-600292b3fb79",
+      "predicate": "under"
+    },
+    {
+      "subject": "e49fbc12-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc14-f555-11eb-a459-600292b3fb79",
+      "predicate": "under"
+    },
+    {
+      "subject": "e49fbc13-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc12-f555-11eb-a459-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "e49fbc13-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc14-f555-11eb-a459-600292b3fb79",
+      "predicate": "far"
+    },
+    {
+      "subject": "e49fbc13-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc14-f555-11eb-a459-600292b3fb79",
+      "predicate": "right_front"
+    },
+    {
+      "subject": "e49fbc14-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc12-f555-11eb-a459-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "e49fbc14-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc13-f555-11eb-a459-600292b3fb79",
+      "predicate": "far"
+    },
+    {
+      "subject": "e49fbc14-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc13-f555-11eb-a459-600292b3fb79",
+      "predicate": "left_behind"
+    }
+  ],
+  "desired_relationships": [
+    {
+      "subject": "e49fbc13-f555-11eb-a459-600292b3fb79",
+      "object": "e49fbc14-f555-11eb-a459-600292b3fb79",
+      "predicate": "left_behind"
+    }
+  ],
+  "image_filename": "e49fbc15-f555-11eb-a459-600292b3fb79.png"
+}

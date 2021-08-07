@@ -329,7 +329,7 @@ def render_scene(args,scene_struct,table_height,
     obj_struct["2d_bbox"] = [x0,y0,x1,y1]
 
 
-  if(objects_overlap(scene_struct,max_percentage = 5)):
+  if(objects_overlap(scene_struct,max_percentage = 10)):
     return False
 
 
@@ -364,19 +364,25 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   scene_objects = []
 
   # Import Object 1 in the scene in the center position with random z orientation
-  imported_object = bpy.ops.import_scene.obj(filepath=obj1_path)
-  selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
-  obj_object1 = selected_objects[0] 
+  if obj1_path.endswith(".obj"):
+    imported_object = bpy.ops.import_scene.obj(filepath=obj1_path)
+    selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
+    obj_object1 = selected_objects[0] 
+  elif obj1_path.endswith(".blend"):
+    obj_object1 = append_object_to_scene(filepath=obj1_path)
   obj_object1.name = objects_category[0] + "_" + relationship+ "_" + str(datetime.now())
-  obj_object1.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
+  obj_object1.delta_rotation_euler =  Euler((obj_object1.delta_rotation_euler[0],obj_object1.delta_rotation_euler[1], math.radians(rand_rotation())), 'XYZ')
   scene_objects.append(obj_object1)
 
   # Import Object 2 in the scene in the center position with random z orientation
-  imported_object = bpy.ops.import_scene.obj(filepath=obj2_path)
-  selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
-  obj_object2 = selected_objects[0] 
+  if obj2_path.endswith(".obj"):
+    imported_object = bpy.ops.import_scene.obj(filepath=obj2_path)
+    selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
+    obj_object2 = selected_objects[0] 
+  elif obj2_path.endswith(".blend"):
+    obj_object2 = append_object_to_scene(filepath=obj2_path)
   obj_object2.name = objects_category[1] + "_" +relationship + "_" +  str(datetime.now())
-  obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
+  obj_object2.delta_rotation_euler =  Euler((obj_object2.delta_rotation_euler[0],obj_object2.delta_rotation_euler[1], math.radians(rand_rotation())), 'XYZ')
   scene_objects.append(obj_object2)
 
   bpy.context.view_layer.update() 
@@ -389,7 +395,6 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   min_z_obj2 = min([vec[2] for vec in bbverts_obj2])
 
   #Put objects in the table
-
   obj_object1.location.z += -min_z_obj1 + table_height
   obj_object2.location.z += -min_z_obj2 + table_height
 
@@ -397,7 +402,6 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   
   bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
   bbverts_obj2 = [obj_object2.matrix_world@Vector(bbvert) for bbvert in obj_object2.bound_box]
-  
 
   # Get table limits with the object size so the object doesn't stay ouside of the table
   table_max_x = max([point[0]for point in table_limit_points]) - obj_object2.dimensions.x/2
@@ -426,8 +430,8 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
   obj1_state = UPRIGHT
   obj2_state = UPRIGHT
 
-
   # Apply the relationshiop to the second object
+  out_of_table = 0
   while(inside_table==False):
     if(relationship==LEFT):
       y_pos = random.uniform(-min_dist_y, table_min_y)
@@ -491,7 +495,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
       z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
       obj_object2.location.y = 0
       obj_object2.location.x = 0
-      obj_object2.delta_rotation_euler =  Euler((0,3.14, 0), 'XYZ')
+      obj_object2.delta_rotation_euler =  Euler((obj_object2.delta_rotation_euler[0],3.14, obj_object2.delta_rotation_euler[2]), 'XYZ')
       bpy.context.view_layer.update() 
       bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
       max_z_obj1 = max([vec[2] for vec in bbverts_obj1])
@@ -504,14 +508,13 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
     all_y = [point[1] for point in table_limit_points]
 
     bpy.context.view_layer.update() 
-    print(table_limit_points)
-    # Position of obj1 relatively to obj2
-    print(obj_object2.location)
-    
+  
     # Check if the 2nd object is inside the table
     if (obj_object2.location.x<=table_max_x and obj_object2.location.x>=table_min_x and obj_object2.location.y<=table_max_y and obj_object2.location.y>table_min_y):
       inside_table = True
-
+    if out_of_table > 10:
+      return False
+    out_of_table+=1
 
   bpy.context.view_layer.update()
 
@@ -559,6 +562,7 @@ def add_two_objects(args,scene_struct, objects_category, objects_path, relations
                           "object":obj2_metadata["id"],
                           "predicate":relationship
                         })
+  scene_struct['relationships'] = compute_all_relationships(args,scene_struct)
   return scene_struct
 
 def add_object_with_relationship(args,scene_struct,reference_object ,object_category, object_path, relationship,table_height,table_limit_points):
@@ -566,6 +570,7 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
   """
   Add two objects to the current blender scene
   """
+  bpy.context.view_layer.update()
 
   # Get the path of the objects to add to the scene
   obj2_path =  object_path # args.models_dir + "/" + objects_category[1] + "/" +  objects_id[1]  + "/models/model_normalized.obj"
@@ -575,13 +580,21 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
   # Object 1 is the reference object
   obj_object1 = bpy.context.scene.objects[reference_object['scene_object_name']]
 
+
   # Import Object 2 in the scene in the center position with random z orientation
-  imported_object = bpy.ops.import_scene.obj(filepath=obj2_path)
-  selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
-  obj_object2 = selected_objects[0] 
-  obj_object2.name = object_category + "_" + relationship + "_" +  str(datetime.now())
-  obj_object2.delta_rotation_euler =  Euler((0,0, math.radians(rand_rotation())), 'XYZ')
+  if obj2_path.endswith(".obj"):
+    imported_object = bpy.ops.import_scene.obj(filepath=obj2_path)
+    selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
+    obj_object2 = selected_objects[0] 
+  elif obj2_path.endswith(".blend"):
+    obj_object2 = append_object_to_scene(filepath=obj2_path)
+  obj_object2.name = object_category + "_" +relationship + "_" +  str(datetime.now())
+  obj_object2.delta_rotation_euler =  Euler((obj_object2.delta_rotation_euler[0],obj_object2.delta_rotation_euler[1], math.radians(rand_rotation())), 'XYZ')
   scene_objects.append(obj_object2)
+
+
+  
+ 
 
   bpy.context.view_layer.update()
    
@@ -592,7 +605,6 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
 
   #Put objects in the table
   obj_object2.location.z += -min_z_obj2 + table_height
-
   bpy.context.view_layer.update() 
   
   bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
@@ -614,6 +626,8 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
   obj2_dimension_x = abs(max(bbvert [0] for bbvert in bbverts_obj2)-min(bbvert [0] for bbvert in bbverts_obj2)) 
   obj2_dimension_y = abs(max(bbvert [1] for bbvert in bbverts_obj2)-min(bbvert [1] for bbvert in bbverts_obj2))
   obj2_dimension_z = abs(max(bbvert [2] for bbvert in bbverts_obj2)-min(bbvert [2] for bbvert in bbverts_obj2))
+
+  max_z_obj1 = max(bbvert [2] for bbvert in bbverts_obj1)
 
   border_limit = args.border_limit
   inside_table = False
@@ -673,7 +687,8 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
       y_pos = 0 
       #obj_object2.location.y = y_pos
       #obj_object2.location.x = x_pos
-      obj_object2.location.z += obj1_dimension_z
+      bpy.context.view_layer.update() 
+      obj_object2.location.z = max_z_obj1 + abs(min_z_obj2)
     elif(relationship==UNDER):
       x_pos = 0
       y_pos = 0 
@@ -690,7 +705,7 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
       z_pos = (obj_object1.matrix_world @ obj_object1.dimensions)
       obj_object2.location.y = 0
       obj_object2.location.x = 0
-      obj_object2.delta_rotation_euler =  Euler((0,3.14, 0), 'XYZ')
+      obj_object2.delta_rotation_euler =  Euler((obj_object2.delta_rotation_euler[0],3.14, obj_object2.delta_rotation_euler[2]), 'XYZ')
       bpy.context.view_layer.update() 
       bbverts_obj1 = [obj_object1.matrix_world@Vector(bbvert) for bbvert in obj_object1.bound_box]
       max_z_obj1 = max([vec[2] for vec in bbverts_obj1])
@@ -707,7 +722,7 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
     # Check if the 2nd object is inside the table
     if (obj_object2.location.x<=table_max_x and obj_object2.location.x>=table_min_x and obj_object2.location.y<=table_max_y and obj_object2.location.y>table_min_y):
       inside_table = True
-    if out_of_table >10:
+    if out_of_table > 10:
       return False
     out_of_table+=1
 
@@ -741,9 +756,8 @@ def add_object_with_relationship(args,scene_struct,reference_object ,object_cate
                           "subject":obj2_metadata["id"],
                           "predicate":relationship
                         })
+  scene_struct['relationships'] = compute_all_relationships(args,scene_struct)
   return scene_struct
-
-
 
 def compute_all_relationships(args,scene_struct):
   """ Computes relationships between all pairs of objects in the scene."""
@@ -909,7 +923,6 @@ def objects_overlap(scene_struct,max_percentage):
       x_dist = min(left_bottom1[0], left_bottom1[0])- max(top_right1[0], top_right1[0])
       y_dist =min(top_right1[1], top_right2[1])- max(left_bottom1[1], left_bottom2[1])
       z_dist = min(top_right1[2], top_right2[2])-max(left_bottom1[2], left_bottom2[2])
-      print(obj1.name + "-" + obj2.name + ":x,y,z:", x_dist,y_dist,z_dist)
       if( x_dist > 0 and y_dist > 0 and z_dist > 0 ):
         inters_volume = x_dist * y_dist * z_dist
       else:
@@ -919,7 +932,6 @@ def objects_overlap(scene_struct,max_percentage):
       obj2_vol = abs(top_right2[0]-left_bottom2[0]) * abs(top_right2[1]-left_bottom2[1]) * abs(top_right2[2]-left_bottom2[2])
       
       percentage = (inters_volume/(obj1_vol + obj2_vol))*100
-
       if (inters_volume == 0):
         print(obj1.name + " doesn't intersect " + obj2.name)
       else:
@@ -927,7 +939,7 @@ def objects_overlap(scene_struct,max_percentage):
       if percentage > max_percentage:
         return True
       
-      return False
+  return False
       
       # percentage_visible = (inters_area/object_area)*100
       # print(obj['category'] +" is "+ str(percentage_visible) + "%% in the image")
@@ -1017,8 +1029,6 @@ def draw_bounding_box_points(bb_verts):
     bm.to_mesh(mesh)
     bm.free()
 
-
-
 def check_visibility(args, scene_struct, min_visible_percentage_per_object):
   """
   Check whether all objects in the scene have some minimum number of visible
@@ -1050,20 +1060,46 @@ def check_visibility(args, scene_struct, min_visible_percentage_per_object):
       percentage_visible = 0
     else:
       percentage_visible = (inters_area/object_area+0.0000001)*100
-    print(obj['category'] +" is "+ str(percentage_visible) + "%% in the image")
+    #print(obj['category'] +" is "+ str(percentage_visible) + "%% in the image")
     if (percentage_visible<min_visible_percentage_per_object):
-      print("Objects are not visible!")
+      #print("Objects are not visible!")
       return False
   return True
 
-def select_two_models(models_type,relationship):
+def append_object_to_scene(filepath):
+  ## Override context due to blender 
+  for window in bpy.context.window_manager.windows:
+    screen = window.screen
+
+    for area in screen.areas:
+        if area.type == 'VIEW_3D':
+            override = {'window': window, 'screen': screen, 'area': area}
+            bpy.ops.screen.screen_full_area(override)
+            break
+
+  inner_path = 'Object'
+  with bpy.data.libraries.load(filepath, link=False) as (data_from, data_to):
+    # link object to scene collection
+    for obj_name in data_from.objects:
+      if obj_name is not None:
+        if obj_name == "Light" or obj_name == "Camera":
+          continue
+        bpy.ops.wm.append(
+          directory = os.path.join(filepath, inner_path),
+          filename = obj_name
+        )
+        selected_objects = [ o for o in bpy.context.scene.objects if o.select_get() ]
+        obj_object = selected_objects[0] 
+        return obj_object
+
+def select_first_two_models(models_type,relationship):
   # Apply restrictions to relationships with some objects
   models_1_type = models_type
   models_2_type = models_type
 
 
   if (relationship is ON):
-    models_1_type = [model for model in models_type if model!='Bottle'] # Base can be everything except bottle
+    models_1_type = [model for model in models_type if model!='Bottle' and model != 'Wine_Glass' and model != "Fork"and model != "Knife"and model != "Spoon"] 
   
   if (relationship is INSIDE_UP):
     models_1_type = [model for model in models_type if model=='Bottle']
@@ -1073,6 +1109,8 @@ def select_two_models(models_type,relationship):
     models_1_type =  [model for model in models_type if model=='Mug']
     models_2_type = [model for model in models_type if model=='Bottle']
 
+  if(len(models_1_type)==0):
+    return None, None
   # Select 1st model
   model1_key = random.choice(models_1_type)
 
@@ -1083,23 +1121,30 @@ def select_two_models(models_type,relationship):
   # Select 2nd model
   model2_key = random.choice(models_2_type)
 
+  
   return model1_key, model2_key
 
-def select_model(reference_model, models_type,relationship):
+def select_model(reference_model_struct, models_type,relationship,scene_struct):
   # Apply restrictions to relationships with some objects
+  
+  reference_model = reference_model_struct['category']
   models_2_type = models_type
 
 
-  if (relationship is ON and reference_model is 'Bottle'):
-    return False
+  if (relationship is ON and (reference_model is 'Bottle'
+   or reference_model is 'Fork'
+   or reference_model is 'Knife'
+   or reference_model is 'Spoon'
+   or reference_model is 'Wine_Glass')):
+    return None
 
   if (relationship is INSIDE_UP and reference_model is not 'Bottle') :
-    return False
+    return None
   elif (relationship is INSIDE_UP and reference_model is 'Bottle'):
     models_2_type = [model for model in models_type if model=='Mug']
   
   if (relationship is INSIDE and reference_model is not 'Mug'): # we can only have bottle inside mug
-    return False
+    return None
   elif(relationship is INSIDE and reference_model is 'Mug'):
     models_2_type = [model for model in models_type if model=='Bottle']
 
@@ -1114,6 +1159,7 @@ def select_model(reference_model, models_type,relationship):
   model2_key = random.choice(models_2_type)
 
   return  model2_key
+
 
 def main(args):
   
@@ -1134,64 +1180,81 @@ def main(args):
     models_3d[category] = []
     for root, dirs, files in os.walk(args.models_dir + "/" + category + "/"):
       for file in files:
-          if file.endswith(".obj"):
+          if file.endswith(".obj") or file.endswith(".blend"):
               model_path = os.path.join(root, file)
               models_3d[category].append(model_path)
 
   table_models_paths = models_3d["Table"]
 
-
-  # Read configuration file
-  with open(args.models_dir+ "/"+'config.json') as json_file:
-    config_models = json.load(json_file)
- 
-  models_type = list(config_models.keys())
-
+  # Task 1
+  #models_type = ["Mug","Book","Bottle"]
+  # Task 2
+  #models_type = ["Plate","Fork","Knife","Wine_Glass","Spoon"]
+  # Task 3
+  models_type = ["Box"]
   num_imgs_render = args.num_images
   # Generate images with mug, bottle and books
+  num_objects_chosen = random.choice([2,5])    # Randomly choose 2 or 3 objects in the image
   while(num_imgs_render>0):
-    
+    num_objects = num_objects_chosen
     # Initialize scene struct
     scene_struct = {"objects":[], "relationships":[],'desired_relationships':[]}
 
     # Load the main blendfile
     bpy.ops.wm.open_mainfile(filepath='data/base_scene.blend')
 
+
     # Add random table
     scene_struct, table_height, table_limit_points = add_random_table(args,scene_struct,table_models_paths)
     
-    # Randomly choose 2 or 3 objects in the image
-    num_objects = random.choice([2,3])
-    # Choose random relation for the objects
-    relationship = random.choice(relationships)
-
-    model1_key, model2_key = select_two_models(models_type,relationship)
-    
-    
-
-    # Add two objects to the table with the relationship chosen
-    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],relationship,table_height,table_limit_points)
-    
-    if num_objects == 3:
-      # Add an object with the reference in an existing object
-
-      # Choose another random relation for the objects
+    model1_key = None
+    model2_key = None
+    while(model1_key is None and model2_key is None):
       relationship = random.choice(relationships)
-      model2_key = select_model(model1_key,models_type,relationship)
-      while(model2_key is False ):
+      model1_key, model2_key = select_first_two_models(models_type,relationship)
+    scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],relationship,table_height,table_limit_points)# Add two objects to the table with the relationship chosen
+    if scene_struct is False:
+      continue
+    num_objects = num_objects - 2  # 2 objects were added
+    while(num_objects>0):
+      # Add an object with the reference in an existing object
+      # Choose another random relation for the objects
+      model2_key = None
+      while(model2_key is None):
         relationship = random.choice(relationships)
-        model2_key = select_model(model1_key,models_type,relationship)
-      
-      # Add the new object
-      reference_object = scene_struct['objects'][0]
+        reference_object = random.choice([obj for obj in scene_struct['objects'] if obj['category'] != 'Table'])
+        # In case there is already something on the plate put it above the thing above the place 
+        if relationship is ON and reference_object['category'] == 'Plate':
+          there_is_something_above = True
+          while(there_is_something_above):
+              there_is = False
+              for rel in scene_struct['relationships']:
+                if rel['object'] == reference_object['id'] and rel['predicate'] == ON:
+                  for obj in scene_struct['objects']:
+                    if obj['id'] == rel['subject']:
+                      reference_object = obj
+                      there_is = True
+                      #give the object above as reference
+              if there_is == False:
+                there_is_something_above  = False
+
+        model2_key = select_model(reference_object,models_type,relationship,scene_struct)
+        #print("model2_key: ",model2_key)
+      # Add the new objec
+      #print("reference_object:\n",reference_object)
       scene_struct = add_object_with_relationship(args,scene_struct,reference_object,model2_key, random.choice(models_3d[model2_key]),relationship,table_height,table_limit_points)
+      if (scene_struct is False):
+        break
+      else:
+        num_objects = num_objects-1
+
 
     if (scene_struct is False):
-      print("is false")
       continue
 
     if render_scene(args,scene_struct,table_height):
       num_imgs_render -= 1 # if the image is rendered subtract
+      num_objects_chosen = random.choice([2,5])    # Randomly choose 2 or 3 objects in the image
 
   bpy.ops.wm.quit_blender()
 
