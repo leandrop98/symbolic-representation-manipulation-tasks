@@ -4,7 +4,7 @@ import cv2 as cv
 import sys
 import math
 import numpy as np
-path = "../output/images"
+path = "../task3/images"
 
 # Read all json files
 json_files = [pos_json for pos_json in os.listdir(path) if pos_json.endswith('.json')]
@@ -15,6 +15,7 @@ avg_obj = 0
 avg_rel = 0
 im_rel_count = 0
 im_obj_count = 0
+count_inside = 0
 for json_file in json_files:
     with open(path + "/" + json_file, 'r') as file:
         count_img+=1
@@ -23,6 +24,11 @@ for json_file in json_files:
 
         for relationship in data["relationships"]:
             predicate = relationship['predicate']
+            if predicate.lower() == "inside":
+                json_path = path + "/" + json_file
+                print(json_path)
+                os.remove(json_path)
+                os.remove(json_path.split('.json')[0]+'.png')
             if predicate.lower() in all_rel_count:
                 all_rel_count[predicate.lower()] += 1
             else: 
