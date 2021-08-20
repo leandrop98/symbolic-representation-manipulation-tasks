@@ -8,7 +8,7 @@ from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw 
 
-path = "../output/images"
+path = "../task1_2"
 # Label map
 voc_labels = [x.strip() for x in open(f'obj.txt').readlines()]
 label_map = {k: v + 1 for v, k in enumerate(voc_labels)}
@@ -83,7 +83,7 @@ def display_images(bbox2d,bbox3d):
             columns_number = math.ceil(len(data["relationships"])/10)
             
             # Resize display are to write the relationships
-            blank_image = np.zeros((height,width+(250*2),3), np.uint8)
+            blank_image = np.zeros((height,width+(350*2),3), np.uint8)
             blank_image[:,:] = (255,255,255)
             l_img = blank_image.copy()                
             l_img[0:height, 0:width] = img.copy()
@@ -102,7 +102,7 @@ def display_images(bbox2d,bbox3d):
                         subject = obj["category"]
                     if obj["id"] == relationship["object"]:
                         object = obj["category"]
-                cv.putText(img,subject + "-" + relationship["predicate"]+"-" + object, (width + 10+ (200*column),text_position), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color = (0,0,0),lineType=1)
+                cv.putText(img,subject + "-" + relationship["predicate"]+"-" + object, (width + 10+ (350*column),text_position), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color = (0,0,0),lineType=1)
                 text_position += 15
                 
                 # Add 1 line
@@ -118,7 +118,7 @@ def display_images(bbox2d,bbox3d):
             text_position += 15
             for obj in data['objects']:
                 if 'state' in obj:
-                    cv.putText(img,obj['category'] + " is " + obj["state"], (width + 10 +  (200*column),text_position), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color = (0,0,0),lineType=1)
+                    cv.putText(img,obj['category'] + " is " + obj["state"], (width + 10 +  (350*column),text_position), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5,color = (0,0,0),lineType=1)
                     text_position += 15
 
             cv.putText(img,  data["image_filename"], (10,10), fontFace = cv.FONT_HERSHEY_SIMPLEX, fontScale=0.3,color = (0,0,0),lineType=1)
@@ -136,6 +136,7 @@ def main(argv):
             bbox2d = True
         if (arg == "bbox3d"):
             bbox3d = True
+    print(argv)
 
     display_images(bbox2d,bbox3d)
 if __name__ == "__main__":
