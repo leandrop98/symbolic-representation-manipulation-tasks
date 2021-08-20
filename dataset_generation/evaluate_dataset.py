@@ -4,7 +4,7 @@ import cv2 as cv
 import sys
 import math
 import numpy as np
-path = "../task1_2/"
+path = "../task1/images"
 
 # Read all json files
 json_files = [pos_json for pos_json in os.listdir(path) if pos_json.endswith('.json')]
@@ -16,8 +16,11 @@ avg_rel = 0
 im_rel_count = 0
 im_obj_count = 0
 count_inside = 0
-mug_upside_down = 0
+mugs_to_delete = 0
+img_to_delete = 0
+
 for json_file in json_files:
+    mugs_per_image = 0
     mug_upside_down_per_img = 0
     with open(path + "/" + json_file, 'r') as file:
         count_img+=1
@@ -38,17 +41,25 @@ for json_file in json_files:
             else: 
                 all_rel_count[predicate.lower()] = 1
             im_rel_count+=1
-                        
+
+        list_cats=[]       
         for obj in data['objects']:
             cat = obj['category']
-            if cat == "Mug_upside_down":
-                mug_upside_down +=1
-                mug_upside_down_per_img +=1
+            list_cats.append(cat)
             if cat.lower() in all_obj_count:
                 all_obj_count[cat.lower()] += 1
             else:
                 all_obj_count[cat.lower()] = 1
             im_obj_count+=1
+        if img_to_delete > 0:
+            #if ("Mug" in list_cats and "Bottle" in list_cats and not "Mug_upside_down" in list_cats):
+            os.remove(json_path)
+            os.remove(json_path.split('.json')[0]+'.png')     
+            img_to_delete -=1
+        # if mug_upside_down_per_img > 1:
+        #     if(os.path.isfile(json_path)):
+        #         os.remove(json_path)
+        #     os.remove(json_path.split('.json')[0]+'.png')           
    
 avg_obj = im_obj_count/count_img
 avg_rel = im_rel_count/count_img
@@ -57,7 +68,5 @@ print('all_rel_count:',all_rel_count)
 print('count_img:', count_img)
 print('avg_obj:', avg_obj)
 print('avg_rel:', avg_rel)
-print("Mugs upside down: ", mug_upside_down)
-
 
 

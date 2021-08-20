@@ -8,7 +8,7 @@ from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw 
 
-path = "../task1_2"
+path = "../task1_3/images"
 # Label map
 voc_labels = [x.strip() for x in open(f'obj.txt').readlines()]
 label_map = {k: v + 1 for v, k in enumerate(voc_labels)}

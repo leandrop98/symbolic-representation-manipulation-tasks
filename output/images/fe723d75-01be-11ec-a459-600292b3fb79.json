@@ -1,0 +1,318 @@
+{
+  "objects": [
+    {
+      "id": "fe723d71-01be-11ec-a459-600292b3fb79",
+      "scene_object_name": "Table",
+      "category": "Table",
+      "3d_bbox": [
+        [
+          253,
+          351,
+          23.054794311523438
+        ],
+        [
+          51,
+          350,
+          23.156700134277344
+        ],
+        [
+          45,
+          188,
+          21.963668823242188
+        ],
+        [
+          259,
+          189,
+          21.86176300048828
+        ],
+        [
+          284,
+          485,
+          17.134197235107422
+        ],
+        [
+          12,
+          482,
+          17.236103057861328
+        ],
+        [
+          2,
+          271,
+          16.043071746826172
+        ],
+        [
+          294,
+          273,
+          15.941165924072266
+        ]
+      ],
+      "model_path": "data/models/Table/1a96d308eef57195efaa61516f88b67/models/model_normalized.obj",
+      "2d_bbox": [
+        2,
+        188,
+        294,
+        300
+      ]
+    },
+    {
+      "id": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "scene_object_name": "Bottle_inside_up_2021-08-20 16:00:37.074677",
+      "category": "Bottle",
+      "state": "upright",
+      "3d_bbox": [
+        [
+          149,
+          226,
+          18.787586212158203
+        ],
+        [
+          157,
+          224,
+          18.925329208374023
+        ],
+        [
+          157,
+          188,
+          18.704648971557617
+        ],
+        [
+          149,
+          189,
+          18.566905975341797
+        ],
+        [
+          143,
+          223,
+          18.979530334472656
+        ],
+        [
+          151,
+          222,
+          19.117271423339844
+        ],
+        [
+          151,
+          185,
+          18.896591186523438
+        ],
+        [
+          143,
+          187,
+          18.75885009765625
+        ]
+      ],
+      "model_path": "data/models/Bottle/9012b03ddb6d9a3dfbe67b89c7bdca4f/models/model_normalized.obj",
+      "2d_bbox": [
+        143,
+        185,
+        157,
+        226
+      ]
+    },
+    {
+      "id": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "scene_object_name": "Mug_inside_up_2021-08-20 16:00:37.083015",
+      "category": "Mug_upside_down",
+      "state": "upside_down",
+      "3d_bbox": [
+        [
+          144,
+          191,
+          18.23076057434082
+        ],
+        [
+          137,
+          183,
+          18.90842056274414
+        ],
+        [
+          137,
+          200,
+          19.01214599609375
+        ],
+        [
+          144,
+          209,
+          18.334484100341797
+        ],
+        [
+          166,
+          190,
+          18.364810943603516
+        ],
+        [
+          158,
+          182,
+          19.042470932006836
+        ],
+        [
+          158,
+          199,
+          19.146194458007812
+        ],
+        [
+          166,
+          207,
+          18.468534469604492
+        ]
+      ],
+      "model_path": "data/models/Mug/df026976dc03197213ac44947b92716e/models/model_normalized.obj",
+      "2d_bbox": [
+        137,
+        182,
+        166,
+        209
+      ]
+    },
+    {
+      "id": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "scene_object_name": "Book_right_2021-08-20 16:00:37.157547",
+      "category": "Book",
+      "state": "upright",
+      "3d_bbox": [
+        [
+          260,
+          224,
+          18.95994758605957
+        ],
+        [
+          270,
+          219,
+          19.3489990234375
+        ],
+        [
+          270,
+          217,
+          19.337247848510742
+        ],
+        [
+          260,
+          222,
+          18.948196411132812
+        ],
+        [
+          237,
+          219,
+          19.338584899902344
+        ],
+        [
+          247,
+          214,
+          19.727636337280273
+        ],
+        [
+          247,
+          212,
+          19.71588706970215
+        ],
+        [
+          237,
+          217,
+          19.326833724975586
+        ]
+      ],
+      "model_path": "data/models/Book/book/untitled.obj",
+      "2d_bbox": [
+        237,
+        212,
+        270,
+        224
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "subject": "fe723d71-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "predicate": "under"
+    },
+    {
+      "subject": "fe723d71-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "predicate": "under"
+    },
+    {
+      "subject": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d71-01be-11ec-a459-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "predicate": "inside"
+    },
+    {
+      "subject": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "predicate": "near"
+    },
+    {
+      "subject": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "predicate": "far"
+    },
+    {
+      "subject": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "predicate": "left"
+    },
+    {
+      "subject": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "predicate": "near"
+    },
+    {
+      "subject": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "predicate": "far"
+    },
+    {
+      "subject": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "predicate": "left"
+    },
+    {
+      "subject": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d71-01be-11ec-a459-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "predicate": "far"
+    },
+    {
+      "subject": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "predicate": "right"
+    },
+    {
+      "subject": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "predicate": "far"
+    },
+    {
+      "subject": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "predicate": "right"
+    }
+  ],
+  "desired_relationships": [
+    {
+      "subject": "fe723d72-01be-11ec-a459-600292b3fb79",
+      "object": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "predicate": "inside_up"
+    },
+    {
+      "object": "fe723d73-01be-11ec-a459-600292b3fb79",
+      "subject": "fe723d74-01be-11ec-a459-600292b3fb79",
+      "predicate": "right"
+    }
+  ],
+  "image_filename": "fe723d75-01be-11ec-a459-600292b3fb79.png"
+}
