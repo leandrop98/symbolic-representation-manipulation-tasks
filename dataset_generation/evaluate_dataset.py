@@ -4,10 +4,16 @@ import cv2 as cv
 import sys
 import math
 import numpy as np
-path = "../task1/images"
+path = "../task2/images"
 
 # Read all json files
 json_files = [pos_json for pos_json in os.listdir(path) if pos_json.endswith('.json')]
+png_files = [png_file for png_file in os.listdir(path) if png_file.endswith('.png')]
+for png in png_files:
+    png_path = path + "/" + png
+    json_path = png_path.split('.png')[0]+'.json'
+    if (not os.path.isfile(json_path)):
+        os.remove(png_path)
 all_rel_count = {}
 all_obj_count = {}
 count_img = 0
@@ -32,10 +38,10 @@ for json_file in json_files:
             os.remove(json_path)
         for relationship in data["relationships"]:
             predicate = relationship['predicate']
-            # if predicate.lower() == "inside":
-            #     json_path = path + "/" + json_file
-            #     os.remove(json_path)
-            #     os.remove(json_path.split('.json')[0]+'.png')                
+            if predicate.lower() == "inside":
+                json_path = path + "/" + json_file
+                os.remove(json_path)
+                os.remove(json_path.split('.json')[0]+'.png')                
             if predicate.lower() in all_rel_count:
                 all_rel_count[predicate.lower()] += 1
             else: 
@@ -63,9 +69,16 @@ for json_file in json_files:
    
 avg_obj = im_obj_count/count_img
 avg_rel = im_rel_count/count_img
-print('all_obj_count: ',all_obj_count)
-print('all_rel_count:',all_rel_count)
-print('count_img:', count_img)
+
+print('\nall_obj_count:')
+for key, obj_count in all_obj_count.items():
+    print(key + ":" + str(obj_count))
+
+print('\nall_rel_count:')
+for key, rel_count in all_rel_count.items():
+    print(key + ":" + str(rel_count))
+
+print('\ncount_img:', count_img)
 print('avg_obj:', avg_obj)
 print('avg_rel:', avg_rel)
 
