@@ -4,7 +4,7 @@ import cv2 as cv
 import sys
 import math
 import numpy as np
-path = "../task2/images"
+path = "../task3/images"
 
 # Read all json files
 json_files = [pos_json for pos_json in os.listdir(path) if pos_json.endswith('.json')]
