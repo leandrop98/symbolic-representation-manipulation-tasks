@@ -1,0 +1,208 @@
+{
+  "objects": [
+    {
+      "id": "fc7a7afe-f57c-11eb-a459-600292b3fb79",
+      "scene_object_name": "Table",
+      "category": "Table",
+      "3d_bbox": [
+        [
+          243,
+          337,
+          20.030675888061523
+        ],
+        [
+          68,
+          334,
+          20.177688598632812
+        ],
+        [
+          61,
+          171,
+          18.69501495361328
+        ],
+        [
+          250,
+          173,
+          18.548004150390625
+        ],
+        [
+          279,
+          591,
+          12.821450233459473
+        ],
+        [
+          7,
+          583,
+          12.968461990356445
+        ],
+        [
+          -11,
+          349,
+          11.48578929901123
+        ],
+        [
+          296,
+          355,
+          11.338777542114258
+        ]
+      ],
+      "model_path": "data/models/Table/e9a1325245afff7c405d9b5bb7b18be5/models/model_normalized.obj",
+      "2d_bbox": [
+        0,
+        171,
+        296,
+        300
+      ]
+    },
+    {
+      "id": "fc7a7aff-f57c-11eb-a459-600292b3fb79",
+      "scene_object_name": "Plate_on_2021-08-05 01:37:52.610789",
+      "category": "Plate",
+      "state": "upright",
+      "3d_bbox": [
+        [
+          132,
+          257,
+          14.344917297363281
+        ],
+        [
+          187,
+          249,
+          14.690898895263672
+        ],
+        [
+          187,
+          245,
+          14.664082527160645
+        ],
+        [
+          132,
+          253,
+          14.318100929260254
+        ],
+        [
+          114,
+          233,
+          15.342893600463867
+        ],
+        [
+          167,
+          226,
+          15.688875198364258
+        ],
+        [
+          167,
+          222,
+          15.66205883026123
+        ],
+        [
+          114,
+          229,
+          15.31607723236084
+        ]
+      ],
+      "model_path": "data/models/Plate/plate6.blend",
+      "2d_bbox": [
+        114,
+        222,
+        187,
+        257
+      ]
+    },
+    {
+      "id": "fc7a7b00-f57c-11eb-a459-600292b3fb79",
+      "scene_object_name": "Knife_on_2021-08-05 01:37:52.624747",
+      "category": "Knife",
+      "state": "upright",
+      "3d_bbox": [
+        [
+          129,
+          247,
+          14.565346717834473
+        ],
+        [
+          129,
+          246,
+          14.555185317993164
+        ],
+        [
+          165,
+          224,
+          15.47337818145752
+        ],
+        [
+          165,
+          226,
+          15.483539581298828
+        ],
+        [
+          134,
+          249,
+          14.496621131896973
+        ],
+        [
+          134,
+          247,
+          14.486459732055664
+        ],
+        [
+          170,
+          226,
+          15.40465259552002
+        ],
+        [
+          170,
+          227,
+          15.414813041687012
+        ]
+      ],
+      "model_path": "data/models/Knife/knife2.blend",
+      "2d_bbox": [
+        129,
+        224,
+        170,
+        249
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "subject": "fc7a7afe-f57c-11eb-a459-600292b3fb79",
+      "object": "fc7a7aff-f57c-11eb-a459-600292b3fb79",
+      "predicate": "under"
+    },
+    {
+      "subject": "fc7a7aff-f57c-11eb-a459-600292b3fb79",
+      "object": "fc7a7afe-f57c-11eb-a459-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "fc7a7aff-f57c-11eb-a459-600292b3fb79",
+      "object": "fc7a7b00-f57c-11eb-a459-600292b3fb79",
+      "predicate": "under"
+    },
+    {
+      "subject": "fc7a7aff-f57c-11eb-a459-600292b3fb79",
+      "object": "fc7a7b00-f57c-11eb-a459-600292b3fb79",
+      "predicate": "near"
+    },
+    {
+      "subject": "fc7a7b00-f57c-11eb-a459-600292b3fb79",
+      "object": "fc7a7aff-f57c-11eb-a459-600292b3fb79",
+      "predicate": "on"
+    },
+    {
+      "subject": "fc7a7b00-f57c-11eb-a459-600292b3fb79",
+      "object": "fc7a7aff-f57c-11eb-a459-600292b3fb79",
+      "predicate": "near"
+    }
+  ],
+  "desired_relationships": [
+    {
+      "subject": "fc7a7aff-f57c-11eb-a459-600292b3fb79",
+      "object": "fc7a7b00-f57c-11eb-a459-600292b3fb79",
+      "predicate": "on"
+    }
+  ],
+  "image_filename": "fc7a7b01-f57c-11eb-a459-600292b3fb79.png"
+}
