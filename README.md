@@ -80,6 +80,10 @@ models_type = ["Plate","Fork","Knife","Wine_Glass","Spoon"]
 ```
 In this case the generated images will contain the objects "Plate", "Fork", "Knife", "Wine_Glass", "Spoon".
 
+## Example of generated images
+
+![generated_images](https://user-images.githubusercontent.com/29043968/137180311-345492fd-bf71-45fd-98c0-9832fe3c9a48.png)
+
 
 
 
