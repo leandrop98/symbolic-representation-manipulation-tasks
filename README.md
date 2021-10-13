@@ -27,7 +27,7 @@ echo $PWD/image_generation >> /Applications/blender/blender.app/Contents/Resourc
 ```
 **Note: Replace `python3.5`  with the current python version in your blender.**
 
-You can then renderby running the following commands:
+You can then render images by running the following commands:
 
 ```bash
 cd image_generation
