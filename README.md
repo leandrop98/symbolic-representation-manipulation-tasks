@@ -1,7 +1,7 @@
 # Visually Perceiving Symbolic Representation for Manipulation Task in Robotics
 
 This code was developed in the context of the master thesis with the title "Visually Perceiving Symbolic Representation for Manipulation Task in Robotics".
-Here you can find the code used to generate synthetic datasets used in this work. 
+Here you can find the code used to generate the synthetic datasets used in this work. 
 
 To generate a dataset you can use the example below:
 
