@@ -1,7 +1,10 @@
-# Dataset Generation
+# Visually Perceiving Symbolic Representation for Manipulation Task in Robotics
 
+This code was developed in the context of the master thesis with the title "Visually Perceiving Symbolic Representation for Manipulation Task in Robotics".
+Here you can find the code used to generate synthetic datasets used in this work. 
 
-Example code to generate a dataset:
+To generate a dataset you can use the example below:
+
 ```
 blender --background --python render_images.py -- --delete_previous_images True --use_gpu 1 --num_images 5000
 ```
@@ -64,3 +67,19 @@ optional arguments:
                         The tile size to use for rendering. This should not affect the quality of the rendered image but may affect the speed; CPU-based rendering may achieve better
                         performance using smaller tile sizes while larger tile sizes may be optimal for GPU-based rendering.
 ```
+
+You must change the line 1188 with the model types you want to generate the dataset:
+
+```
+# Task 1
+# models_type = ["Mug","Book","Bottle"]
+# Task 2
+models_type = ["Plate","Fork","Knife","Wine_Glass","Spoon"]
+# Task 3
+# models_type = ["Box"]
+```
+In this case the generated images will contain the objects "Plate","Fork","Knife","Wine_Glass","Spoon".
+
+
+
+
