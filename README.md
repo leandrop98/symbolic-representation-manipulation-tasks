@@ -3,9 +3,54 @@
 This code was developed in the context of the master thesis with the title "Visually Perceiving Symbolic Representation for Manipulation Task in Robotics".
 Here you can find the code used to generate the synthetic datasets used in this work. 
 
+
+## Generating Images
+
+The code was developed in Ubuntu 18.04.5 LTS.
+
+To generate the images you will need:
+
+- [Blender 2.92](https://www.blender.org/download/)
+- [Python 3](https://www.python.org/downloads/)
+
+Firstly, download blender from the official link, then extract the file downloaded. Blender ships with its own installation of Python which is used to execute scripts that interact with Blender;
+
+You'll need to add the `image_generation` directory to Python path of Blender's bundled Python. The easiest way to do this is by adding a `.pth` file to the `site-packages` directory of Blender's Python, like this:
+
+```bash
+echo $PWD/image_generation >> $BLENDER/$VERSION/python/lib/python3.5/site-packages/image_generation.pth
+```
+where `$BLENDER` is the directory where Blender is installed and `$VERSION` is your Blender version; for example on OSX you might run:
+
+```bash
+echo $PWD/image_generation >> /Applications/blender/blender.app/Contents/Resources/2.78/python/lib/python3.5/site-packages/image_generation.pth
+```
+**Note: Replace `python3.5`  with the current python version in your blender.**
+
+You can then renderby running the following commands:
+
+```bash
+cd image_generation
+blender --background --python render_images.py -- --delete_previous_images True --use_gpu 1 --num_images 5000
+```
+
+On OSX the `blender` binary is located inside the blender.app directory; for convenience you may want to
+add the following alias to your `~/.bash_profile` file:
+
+```bash
+alias blender='/Applications/blender/blender.app/Contents/MacOS/blender'
+```
+
+If you have an NVIDIA GPU with CUDA installed then you can use the GPU to accelerate rendering like this:
+
+```bash
+blender --background --python render_images.py -- --num_images 10 --use_gpu 1
+```
+
+
 To generate a dataset you can use the example below:
 
-```
+```bash
 blender --background --python render_images.py -- --delete_previous_images True --use_gpu 1 --num_images 5000
 ```
 
@@ -81,6 +126,8 @@ models_type = ["Plate","Fork","Knife","Wine_Glass","Spoon"]
 In this case the generated images will contain the objects "Plate", "Fork", "Knife", "Wine_Glass", "Spoon".
 
 ## Example of generated images
+
+After the command terminates you should have a set of images like these:
 
 ![generated_images](https://user-images.githubusercontent.com/29043968/137180311-345492fd-bf71-45fd-98c0-9832fe3c9a48.png)
 
