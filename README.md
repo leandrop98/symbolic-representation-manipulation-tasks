@@ -78,7 +78,7 @@ models_type = ["Plate","Fork","Knife","Wine_Glass","Spoon"]
 # Task 3
 # models_type = ["Box"]
 ```
-In this case the generated images will contain the objects "Plate","Fork","Knife","Wine_Glass","Spoon".
+In this case the generated images will contain the objects "Plate", "Fork", "Knife", "Wine_Glass", "Spoon".
 
 
 
