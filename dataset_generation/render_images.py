@@ -1,10 +1,9 @@
 import requests
-import bpy
 import math, sys, random, argparse, json, os, tempfile
 from datetime import datetime as dt
 from collections import Counter
-from mathutils.bvhtree import BVHTree
-import bpy, bmesh
+#from mathutils.bvhtree import BVHTree
+# import bpy, bmesh
 import time
 from mathutils import Euler
 import math
@@ -1187,11 +1186,11 @@ def main(args):
   table_models_paths = models_3d["Table"]
 
   # Task 1
-  models_type = ["Mug","Book","Bottle"]
+  # models_type = ["Mug","Book","Bottle"]
   # Task 2
-  #models_type = ["Plate","Fork","Knife","Wine_Glass","Spoon"]
+  models_type = ["Plate","Fork","Knife","Wine_Glass","Spoon"]
   # Task 3
-  #models_type = ["Box"]
+  # models_type = ["Box"]
   num_imgs_render = args.num_images
   # Generate images with mug, bottle and books
   num_objects_chosen = random.choice([2,3])    # Randomly choose 2 or 3 objects in the image
@@ -1213,12 +1212,10 @@ def main(args):
     while(model1_key is None and model2_key is None):
       relationship = random.choice(relationships)
       model1_key, model2_key = select_first_two_models(models_type,relationship)
-      model1_key = "Bottle"
-      model2_key = "Mug"
       relationship = INSIDE_UP
     scene_struct = add_two_objects(args,scene_struct,[model1_key,model2_key],[random.choice(models_3d[model1_key]),random.choice(models_3d[model2_key])],relationship,table_height,table_limit_points)# Add two objects to the table with the relationship chosen
     if scene_struct is False:
-      bpy.ops.wm.quit_blender()
+      # bpy.ops.wm.quit_blender()
       continue
     num_objects = num_objects - 2  # 2 objects were added
     while(num_objects>0):
@@ -1261,16 +1258,7 @@ def main(args):
       num_imgs_render -= 1 # if the image is rendered subtract
       num_objects_chosen = random.choice([2,3])    # Randomly choose 2 or 3 objects in the image
 
-  bpy.ops.wm.quit_blender()
-
-  # TASKS
-
-
-  # Organization task, pencils inside cup, books, pencil outside cup
-
-  # Generate images with cubes and stacking cubes
-
-  # Render scene...
+  #bpy.ops.wm.quit_blender()
 
 
   # # Read file with the 3d models list
