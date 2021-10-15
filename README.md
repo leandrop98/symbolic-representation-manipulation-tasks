@@ -4,7 +4,7 @@ This code was developed in the context of the master thesis with the title "Visu
 Here you can find the code used to generate the synthetic datasets used in this work. 
 
 
-## Generating Images
+## 1. Generating Images
 
 The code was developed in Ubuntu 18.04.5 LTS.
 
@@ -125,12 +125,45 @@ models_type = ["Plate","Fork","Knife","Wine_Glass","Spoon"]
 ```
 In this case the generated images will contain the objects "Plate", "Fork", "Knife", "Wine_Glass", "Spoon".
 
-## Example of generated images
+### Example of generated images
 
 After the command terminates you should have a set of images like these:
 
 ![generated_images](https://user-images.githubusercontent.com/29043968/137180311-345492fd-bf71-45fd-98c0-9832fe3c9a48.png)
 
+## 2. Neural Networks
 
+The code regarding the neural networks, datasets used, and models trained are available in Google Drive. Click [here](https://drive.google.com/drive/folders/1CDvHaPUWd8XM5vNo7PhWHje4cXXTfdr3?usp=sharing) to go to Google Drive.
 
+### Datasets
+
+All the datasets used are available in the folder `data`.
+There are 3 synthetic datasets that were generated for this thesis. These datasets contain the images and respective annotations. In these datasets the annotations correspond to the object bounding box, object category and the relationships between the objects. 
+
+There are also 3 real world datasets that we captured and labeled manually. In these datasets only the object bounding box and category were labeled. 
+
+The file `obj.txt` in each dataset contains all the object categories in the dataset. The file `rel.txt` contains all the relationships used in the dataset. The file `rel.txt` also exists in the real world datasets but it is not used however this must not be deleted. 
+
+Before using a dataset for training it is necessary to prepare these datasets beforehand. For that use the file `DataPreparation.ipynb`, follow  the instructions in the file to use it. The file `test.pkl` and `train.pkl` must be generated. The file `prior.pkl` correspond to an attempt of using the probability of a triple subject-predicate-object appear in the dataset, however, this was not used in the thesis. 
+
+### Object Detection
+
+To train the Object Detection model you must go to the folder `ssd-object-detection`. Open the file `SSD_ObjectDetection_T1.ipnyb`. This file is prepared to use the dataset for the first task. Follow the instructions in the file to train and test your own dataset. You can also use one of the available datasets.
+
+In the folder `ssd-object-detection/results` there are models trained with the available datasets. You can evaluate or test some images with the trained models.
+
+To use your test dataset for relationship detection you must generate the `proposal.pkl` using the file `SSD_ObjectDetection_T1.ipnyb`.
+
+### Relationship Detection
+
+Our model for relationship detection is located in the folder `vrd-dsr-mine`. In the folder `vrd-dsr-mine/models` there are several models trained that you can use to test or evaluate the model. 
+
+You can train the model by following the instructions in the file `RelationshipDetection.ipynb`.
+You can also use this file to test one of the trained models.
+
+If you have any doubts please refer to the source code. You also read the thesis paper. 
+
+# Citation
+
+If you use this work please cite:
 
